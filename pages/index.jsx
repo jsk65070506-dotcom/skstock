@@ -396,10 +396,12 @@ export default function MarketDaily() {
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [fetchError, setFetchError] = useState(null);
 
-  useEffect(() => {
-    setLoading(true);
+  const fetchData = React.useCallback((isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     setFetchError(null);
     fetch(`/api/market?market=${market}&date=${selectedDate}`)
       .then((r) => r.json())
@@ -408,8 +410,10 @@ export default function MarketDaily() {
         else setData(normalizeData(json));
       })
       .catch((e) => setFetchError(e.message))
-      .finally(() => setLoading(false));
+      .finally(() => { setLoading(false); setRefreshing(false); });
   }, [market, selectedDate]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const accentColor = market === "us" ? "#4d8aff" : "#ff6b35";
 
@@ -508,10 +512,10 @@ export default function MarketDaily() {
               :               { text: "🔵 극단적 탐욕",  color: "#4d8aff" }
               : null;
             return (
-              <div key={idx.name} className="tap" onClick={() => setSelectedIndex(idx)} style={{
+              <div key={idx.name} style={{
                 flexShrink: 0, background: "rgba(255,255,255,0.04)", border: `1px solid ${fgLabel ? fgLabel.color + "33" : "rgba(255,255,255,0.07)"}`,
-                borderRadius: 10, padding: "8px 10px 8px 12px", minWidth: 86,
-                display: "flex", alignItems: "center", gap: 6,
+                borderRadius: 10, padding: "8px 12px", minWidth: 86,
+                display: "flex", alignItems: "center",
               }}>
                 <div>
                   <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.33)", marginBottom: 3 }}>{idx.name}</div>
@@ -520,7 +524,6 @@ export default function MarketDaily() {
                     <div style={{ fontSize: 9, fontWeight: 600, color: fgLabel.color, marginTop: 3 }}>{fgLabel.text}</div>
                   )}
                 </div>
-                <span style={{ fontSize: 14, color: "rgba(255,255,255,0.2)", marginLeft: "auto", lineHeight: 1 }}>›</span>
               </div>
             );
           })}
@@ -543,21 +546,66 @@ export default function MarketDaily() {
       {/* ── BODY ── */}
       <div style={{ flex: 1, padding: "14px 16px 40px" }}>
 
-        {/* 로딩 */}
+        {/* 로딩 — 스켈레톤 */}
         {loading && (
-          <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
-            <div style={{ marginBottom: 10, fontSize: 22 }}>⏳</div>
-            브리핑 불러오는 중...
+          <div>
+            <style>{`
+              @keyframes shimmer {
+                0% { background-position: -400px 0; }
+                100% { background-position: 400px 0; }
+              }
+              .skeleton {
+                background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+                background-size: 800px 100%;
+                animation: shimmer 1.4s infinite;
+                border-radius: 8px;
+              }
+            `}</style>
+            {/* Summary skeleton */}
+            <div style={{ borderRadius: 12, border: "1px solid rgba(255,255,255,0.07)", padding: "13px 14px", marginBottom: 16 }}>
+              <div className="skeleton" style={{ height: 10, width: "40%", marginBottom: 12 }} />
+              <div className="skeleton" style={{ height: 12, width: "100%", marginBottom: 7 }} />
+              <div className="skeleton" style={{ height: 12, width: "80%" }} />
+            </div>
+            {/* Card skeletons */}
+            {[1,2,3].map((i) => (
+              <div key={i} style={{ borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", padding: "13px 14px", marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                  <div className="skeleton" style={{ height: 18, width: 52, borderRadius: 4 }} />
+                  <div className="skeleton" style={{ height: 10, width: 60 }} />
+                </div>
+                <div className="skeleton" style={{ height: 13, width: "90%", marginBottom: 6 }} />
+                <div className="skeleton" style={{ height: 13, width: "65%" }} />
+              </div>
+            ))}
           </div>
         )}
 
         {/* 데이터 없음 / 에러 */}
         {!loading && (fetchError || !data) && (
-          <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
-            <div style={{ marginBottom: 10, fontSize: 22 }}>📭</div>
-            {fetchError === "데이터 없음" || !data
-              ? "아직 발행된 브리핑이 없어요"
-              : fetchError}
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
+            <div style={{ marginBottom: 12, fontSize: 28 }}>☕</div>
+            {fetchError === "데이터 없음" || !data ? (
+              <>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.45)", marginBottom: 8 }}>
+                  아직 오늘 브리핑이 없어요
+                </div>
+                <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.25)", lineHeight: 1.7 }}>
+                  보통 장 시작 전 오전 8시 30분,<br />
+                  장 마감 후 오후 4시에 발행돼요
+                </div>
+                <div className="tap" onClick={() => fetchData(true)} style={{
+                  marginTop: 20, display: "inline-block",
+                  fontSize: 11, padding: "7px 18px", borderRadius: 20,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "rgba(255,255,255,0.4)", cursor: "pointer",
+                }}>
+                  {refreshing ? "확인 중..." : "↻ 다시 확인"}
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 12, color: "#ff4d6d" }}>{fetchError}</div>
+            )}
           </div>
         )}
 
@@ -569,7 +617,7 @@ export default function MarketDaily() {
           <div style={{ background: "rgba(0,229,160,0.05)", padding: "13px 14px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <div style={{ fontSize: 10, color: "#00e5a0", letterSpacing: 1.5, fontWeight: 500 }}>✦ AI 시황 요약</div>
-              <div className="tap" style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 5, padding: "3px 9px", cursor: "pointer" }}>↻ 새로고침</div>
+              <div className="tap" onClick={() => fetchData(true)} style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 5, padding: "3px 9px", cursor: "pointer", opacity: refreshing ? 0.5 : 1 }}>{refreshing ? "⏳" : "↻"} 최신으로</div>
             </div>
             <p style={{ fontSize: 12.5, lineHeight: 1.75, color: "rgba(255,255,255,0.78)" }}>{data.summary}</p>
             {data.picks?.length > 0 && (
@@ -625,7 +673,14 @@ export default function MarketDaily() {
                     }}>
                       {item.sentiment === "bullish" ? "▲ 강세" : "▼ 약세"}
                     </span>
-                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.22)" }}>#{item.sector}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.22)" }}>#{item.sector}</span>
+                      <span style={{
+                        fontSize: 14, color: "rgba(255,255,255,0.25)",
+                        transform: expanded === item.id ? "rotate(90deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s ease", display: "inline-block",
+                      }}>›</span>
+                    </div>
                   </div>
                   <p style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, marginBottom: item.tickers?.length ? 8 : 0 }}>{item.title}</p>
                   {item.tickers?.length > 0 && (
@@ -709,13 +764,7 @@ export default function MarketDaily() {
         </>)}
       </div>
 
-      {selectedIndex && (
-        <IndexDetailSheet
-          idx={selectedIndex}
-          onClose={() => setSelectedIndex(null)}
-          accentColor={accentColor}
-        />
-      )}
+      {/* IndexDetailSheet: 실시간 데이터 연동 전까지 비활성화 */}
     </div>
   );
 }

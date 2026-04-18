@@ -1,11 +1,12 @@
 // pages/admin.jsx
 import React, { useState, useRef } from "react";
 
+// MAX 1000px, JPEG 72% → 장당 약 60~100KB, 30장 = ~2.5MB (Vercel 4.5MB 한도 이내)
 const toBase64 = (file) => new Promise((res, rej) => {
   const img = new Image();
   const url = URL.createObjectURL(file);
   img.onload = () => {
-    const MAX = 1600;
+    const MAX = 1000;
     let w = img.width, h = img.height;
     if (w > MAX || h > MAX) {
       if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -15,7 +16,7 @@ const toBase64 = (file) => new Promise((res, rej) => {
     canvas.width = w; canvas.height = h;
     canvas.getContext("2d").drawImage(img, 0, 0, w, h);
     URL.revokeObjectURL(url);
-    res(canvas.toDataURL("image/jpeg", 0.82).split(",")[1]);
+    res(canvas.toDataURL("image/jpeg", 0.72).split(",")[1]);
   };
   img.onerror = rej;
   img.src = url;
@@ -167,7 +168,13 @@ export default function MarketAdmin() {
         }),
       });
 
-      const json = await res.json();
+      const rawText = await res.text();
+      let json;
+      try { json = JSON.parse(rawText); }
+      catch {
+        const hint = res.status === 413 ? " (이미지가 너무 많아요. 10장 이내로 줄여보세요)" : ` (서버 응답 ${res.status})`;
+        throw new Error(`응답 파싱 실패${hint}\n\n${rawText.slice(0, 300)}`);
+      }
       if (!res.ok) throw new Error(`${json.error || "분석 실패"}${json.detail ? "\n\n" + json.detail : ""}`);
 
       json.fetchedAt = selectedBatch;

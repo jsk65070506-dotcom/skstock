@@ -1,7 +1,5 @@
 #!/bin/bash
 cd /Users/loui/Downloads/kkugi-market
-rm -f .git/HEAD.lock
 git add -A
-git commit -m "Fix: image compression + model name for Vercel"
-git push
+git commit -m "UX improvements + fix admin parse error + model claude-sonnet-4-6"
 npx vercel --prod
