@@ -197,7 +197,10 @@ const AddAssetForm = ({ type, onCancel, onSave, totalTargetRatio, usdKrw }) => {
     ratioMsg = { text: `현재 설정: ${totalTargetRatio}% / 남은: ${100 - totalTargetRatio}%`, color: "rgba(255,255,255,0.5)" };
   }
 
-  const canSave = name.trim() && (needsSearch ? amount && Number(amount) > 0 : amount && Number(amount) > 0) && targetRatio;
+  // 주식: 이름+목표비율만 있으면 저장 가능 (현재가 조회 실패해도 진행)
+  // 현금/기타: 금액 필수
+  const canSave = name.trim() && targetRatio && !priceLoading &&
+    (needsSearch ? true : amount && Number(amount) > 0);
 
   const handleSave = () => {
     if (!canSave) return;
@@ -205,7 +208,7 @@ const AddAssetForm = ({ type, onCancel, onSave, totalTargetRatio, usdKrw }) => {
       type: type.key,
       name: name.trim(),
       ticker: ticker || null,
-      amount: Number(amount),
+      amount: Number(amount) || 0,
       buyPriceOriginal: buyPrice ? Number(buyPrice) : null,
       currentPriceOriginal: priceOriginal,
       qty: qty ? Number(qty) : null,
@@ -277,7 +280,7 @@ const AddAssetForm = ({ type, onCancel, onSave, totalTargetRatio, usdKrw }) => {
             color: priceLabel ? "#00e5a0" : "rgba(255,255,255,0.3)",
             minHeight: 44, display: "flex", alignItems: "center",
           }}>
-            {priceLoading ? "조회 중..." : priceLabel || (name ? "가격 조회 실패 — 수량 직접 입력" : "종목 검색 후 자동 입력")}
+            {priceLoading ? "조회 중..." : priceLabel || (name ? "가격 조회 실패 — 금액을 직접 입력하거나 그냥 저장할 수 있어요" : "종목 검색 후 자동 입력")}
           </div>
         </div>
       )}
@@ -298,7 +301,7 @@ const AddAssetForm = ({ type, onCancel, onSave, totalTargetRatio, usdKrw }) => {
         </label>
         <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
           readOnly={needsSearch && priceOriginal && qty}
-          placeholder={needsSearch ? "수량 입력 시 자동 계산" : "보유 금액 (원)"}
+          placeholder={needsSearch ? (priceOriginal ? "수량 입력 시 자동 계산" : "직접 입력 (선택)") : "보유 금액 (원)"}
           style={{
             ...inputStyle,
             background: needsSearch && priceOriginal && qty ? "rgba(0,229,160,0.05)" : "rgba(255,255,255,0.05)",
@@ -346,7 +349,7 @@ const AddAssetForm = ({ type, onCancel, onSave, totalTargetRatio, usdKrw }) => {
           color: canSave ? "#07080c" : "rgba(255,255,255,0.25)",
           fontFamily: "inherit", fontSize: 13, fontWeight: 700,
           cursor: canSave ? "pointer" : "not-allowed",
-        }}>저장</button>
+        }}>{priceLoading ? "조회 중..." : "저장"}</button>
       </div>
 
       <div style={{ marginTop: 12, fontSize: 10, color: "rgba(255,255,255,0.25)", textAlign: "center" }}>
