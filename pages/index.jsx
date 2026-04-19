@@ -455,7 +455,8 @@ const ASSET_TABS = [
 
 export default function MarketDaily() {
   const [assetTab, setAssetTab] = useState("stock");
-  const [market, setMarket] = useState("us");
+  const [stockMarket, setStockMarket] = useState("us"); // 주식 탭 전용 us/kr
+  const market = assetTab === "stock" ? stockMarket : assetTab; // 실제 API market 키
   const [tab, setTab] = useState("news");
   const [expanded, setExpanded] = useState(null);
   const [selectedDate, setSelectedDate] = useState(DATE_OPTIONS[0].value);
@@ -481,9 +482,9 @@ export default function MarketDaily() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const accentColor = market === "us" ? "#4d8aff" : "#ff6b35";
+  const accentColor = stockMarket === "us" ? "#4d8aff" : "#ff6b35";
 
-  const switchMarket = (mkt) => { setMarket(mkt); setTab("news"); setExpanded(null); };
+  const switchMarket = (mkt) => { setStockMarket(mkt); setTab("news"); setExpanded(null); };
 
   const OG_URL = "https://skstock.vercel.app";
   const OG_IMAGE = `${OG_URL}/api/og`;
@@ -576,7 +577,7 @@ export default function MarketDaily() {
         {/* ── 자산 카테고리 탭 ── */}
         <div style={{ display: "flex", gap: 6, marginBottom: 12, overflowX: "auto" }}>
           {ASSET_TABS.map((a) => (
-            <button key={a.key} onClick={() => setAssetTab(a.key)} style={{
+            <button key={a.key} onClick={() => { setAssetTab(a.key); setData(null); setTab("news"); setExpanded(null); }} style={{
               flexShrink: 0,
               padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
               fontFamily: "inherit", fontSize: 12, fontWeight: assetTab === a.key ? 700 : 500,
@@ -602,7 +603,7 @@ export default function MarketDaily() {
         </div>
         )}
 
-        {assetTab === "stock" && (<>
+        <>
         {/* Sentiment + one-liner */}
         {data && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -659,79 +660,14 @@ export default function MarketDaily() {
             }}>{t.label}</button>
           ))}
         </div>
-        </>)}
+        </>
       </div>
 
       {/* ── BODY ── */}
       <div style={{ flex: 1, padding: "14px 16px 40px" }}>
 
-        {/* 준비 중 화면 — 주식 외 탭 */}
-        {assetTab !== "stock" && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 24px 40px", textAlign: "center" }}>
-            {/* 개발자 SVG 일러스트 */}
-            <svg width="180" height="150" viewBox="0 0 180 150" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: 28, opacity: 0.85 }}>
-              {/* 책상 */}
-              <rect x="10" y="112" width="160" height="8" rx="4" fill="rgba(255,255,255,0.08)"/>
-              <rect x="20" y="120" width="10" height="22" rx="3" fill="rgba(255,255,255,0.06)"/>
-              <rect x="150" y="120" width="10" height="22" rx="3" fill="rgba(255,255,255,0.06)"/>
-              {/* 모니터 */}
-              <rect x="40" y="52" width="100" height="62" rx="8" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5"/>
-              <rect x="46" y="58" width="88" height="50" rx="4" fill="#0d1117"/>
-              {/* 모니터 받침 */}
-              <rect x="82" y="114" width="16" height="8" rx="2" fill="rgba(255,255,255,0.07)"/>
-              <rect x="72" y="121" width="36" height="4" rx="2" fill="rgba(255,255,255,0.07)"/>
-              {/* 코드 줄 1 */}
-              <rect x="52" y="65" width="28" height="3.5" rx="1.5" fill="#00e5a0" opacity="0.7"/>
-              <rect x="84" y="65" width="18" height="3.5" rx="1.5" fill="rgba(255,255,255,0.2)"/>
-              {/* 코드 줄 2 */}
-              <rect x="56" y="73" width="20" height="3" rx="1.5" fill="rgba(77,138,255,0.6)"/>
-              <rect x="80" y="73" width="32" height="3" rx="1.5" fill="rgba(255,255,255,0.15)"/>
-              {/* 코드 줄 3 */}
-              <rect x="56" y="81" width="14" height="3" rx="1.5" fill="rgba(255,200,80,0.6)"/>
-              <rect x="74" y="81" width="24" height="3" rx="1.5" fill="rgba(255,255,255,0.15)"/>
-              {/* 코드 줄 4 */}
-              <rect x="52" y="89" width="36" height="3" rx="1.5" fill="#00e5a0" opacity="0.5"/>
-              {/* 커서 깜빡이 */}
-              <rect x="92" y="89" width="2" height="10" rx="1" fill="#00e5a0" opacity="0.9"/>
-              {/* 사람 머리 */}
-              <circle cx="134" cy="68" r="13" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.2"/>
-              {/* 눈 */}
-              <circle cx="130" cy="67" r="1.8" fill="rgba(255,255,255,0.5)"/>
-              <circle cx="138" cy="67" r="1.8" fill="rgba(255,255,255,0.5)"/>
-              {/* 입 (집중한 표정) */}
-              <rect x="130" y="73" width="8" height="1.5" rx="0.75" fill="rgba(255,255,255,0.3)"/>
-              {/* 사람 몸 */}
-              <path d="M121 112 C121 95 147 95 147 112" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" strokeWidth="1.2"/>
-              {/* 팔 — 키보드 방향 */}
-              <path d="M121 100 L100 108" stroke="rgba(255,255,255,0.1)" strokeWidth="5" strokeLinecap="round"/>
-              <path d="M147 100 L110 108" stroke="rgba(255,255,255,0.1)" strokeWidth="5" strokeLinecap="round"/>
-              {/* 키보드 */}
-              <rect x="88" y="108" width="36" height="6" rx="2" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
-              {/* 커피잔 */}
-              <rect x="22" y="100" width="16" height="12" rx="3" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
-              <path d="M38 104 Q44 104 44 108 Q44 112 38 112" stroke="rgba(255,255,255,0.1)" strokeWidth="1.2" fill="none"/>
-              {/* 커피 김 */}
-              <path d="M26 97 Q28 93 26 89" stroke="rgba(255,255,255,0.15)" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
-              <path d="M32 96 Q34 92 32 88" stroke="rgba(255,255,255,0.15)" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
-            </svg>
-
-            {/* 준비중 뱃지 */}
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, padding: "3px 10px", borderRadius: 20, background: "rgba(0,229,160,0.1)", color: "#00e5a0", border: "1px solid rgba(0,229,160,0.25)", marginBottom: 16, display: "inline-block" }}>
-              개발 중
-            </span>
-
-            <div style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.7)", marginBottom: 10, letterSpacing: -0.3 }}>
-              열심히 만들고 있어요
-            </div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", lineHeight: 1.9 }}>
-              {ASSET_TABS.find(a => a.key === assetTab)?.label} 브리핑을 준비 중이에요<br />
-              조금만 기다려주세요 👨‍💻
-            </div>
-          </div>
-        )}
-
         {/* 로딩 — 스켈레톤 */}
-        {assetTab === "stock" && loading && (
+        {loading && (
           <div>
             <style>{`
               @keyframes shimmer {
@@ -766,7 +702,7 @@ export default function MarketDaily() {
         )}
 
         {/* 데이터 없음 / 에러 */}
-        {assetTab === "stock" && !loading && (fetchError || !data) && (() => {
+        {!loading && (fetchError || !data) && (() => {
           const isNoData = fetchError === "데이터 없음" || !data;
           const dow = new Date(selectedDate + "T12:00:00").getDay(); // 0=Sun, 6=Sat
           const isWeekend = dow === 0 || dow === 6;
@@ -817,7 +753,7 @@ export default function MarketDaily() {
         })()}
 
         {/* 실제 콘텐츠 */}
-        {assetTab === "stock" && !loading && data && (<>
+        {!loading && data && (<>
 
         {/* AI 요약 */}
         <div style={{ marginBottom: 16, borderRadius: 12, border: "1px solid rgba(0,229,160,0.18)", overflow: "hidden" }}>
