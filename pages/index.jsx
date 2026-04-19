@@ -466,31 +466,10 @@ export default function MarketDaily() {
 
   const switchMarket = (mkt) => { setStockMarket(mkt); setTab("news"); setExpanded(null); };
 
-  const OG_URL = "https://skstock.vercel.app";
-  const OG_IMAGE = `${OG_URL}/api/og`;
-  const OG_TITLE = "꾸기 Daily Morning";
-  const OG_DESC = "AI가 분석하는 매일 아침 주식·부동산·코인 브리핑";
-
   return (
     <>
       <Head>
-        <title>{OG_TITLE}</title>
-        <meta name="description" content={OG_DESC} />
-
-        {/* Open Graph */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={OG_URL} />
-        <meta property="og:title" content={OG_TITLE} />
-        <meta property="og:description" content={OG_DESC} />
-        <meta property="og:image" content={OG_IMAGE} />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-
-        {/* Twitter / KakaoTalk */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={OG_TITLE} />
-        <meta name="twitter:description" content={OG_DESC} />
-        <meta name="twitter:image" content={OG_IMAGE} />
+        <title>+α | 월급만으론 부족한 우리를 위해</title>
       </Head>
     <div style={{
       fontFamily: "'IBM Plex Mono', monospace",

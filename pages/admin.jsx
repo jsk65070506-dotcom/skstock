@@ -1,5 +1,6 @@
 // pages/admin.jsx
 import React, { useState, useRef } from "react";
+import Head from "next/head";
 
 // MAX 1000px, JPEG 72% → 장당 약 60~100KB, 30장 = ~2.5MB (Vercel 4.5MB 한도 이내)
 const toBase64 = (file) => new Promise((res, rej) => {
@@ -305,6 +306,8 @@ export default function MarketAdmin() {
   const totalSizeKB = images.reduce((s, img) => s + (img.sizeKB || 0), 0);
 
   return (
+    <>
+    <Head><title>+α 관리자</title></Head>
     <div style={{ fontFamily: "'IBM Plex Mono', monospace", background: "#07080c", minHeight: "100vh", maxWidth: 480, margin: "0 auto", color: "#dde1ea" }}>
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap');
@@ -603,5 +606,6 @@ export default function MarketAdmin() {
         )}
       </div>
     </div>
+    </>
   );
 }
