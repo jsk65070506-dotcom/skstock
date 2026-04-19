@@ -1,6 +1,7 @@
 // pages/api/analyze.js
 export const config = {
   api: { bodyParser: { sizeLimit: "25mb" } },
+  maxDuration: 60,
 };
 
 const JSON_SCHEMA = `{
@@ -90,14 +91,14 @@ ${JSON_SCHEMA}`,
   } else {
     // 텍스트/URL 기반 — Jina AI Reader로 URL 본문 추출
     const URL_REGEX = /https?:\/\/[^\s\)\]\}"'<>]+/g;
-    const urls = [...new Set(effectiveTextContent.match(URL_REGEX) || [])].slice(0, 8);
+    const urls = [...new Set(effectiveTextContent.match(URL_REGEX) || [])].slice(0, 5);
     const plainText = effectiveTextContent.replace(URL_REGEX, "").replace(/\s+/g, " ").trim();
 
-    // URL 병렬 처리 (전체 6초 상한)
+    // URL 병렬 처리 (전체 20초 상한)
     const fetchedParts = urls.length > 0
       ? await Promise.race([
           Promise.all(urls.map(fetchUrlText)),
-          new Promise(resolve => setTimeout(() => resolve([]), 6000)),
+          new Promise(resolve => setTimeout(() => resolve([]), 20000)),
         ])
       : [];
 
