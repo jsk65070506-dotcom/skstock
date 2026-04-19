@@ -53,8 +53,13 @@ export default async function handler(req, res) {
   const { images, market, analystNotes, textContent } = req.body || {};
   const hasImages = images?.length > 0;
   const hasText = !!textContent?.trim();
+  const hasNotes = !!analystNotes?.trim();
 
-  if (!hasImages && !hasText) return res.status(400).json({ error: "이미지 또는 텍스트 콘텐츠가 없습니다" });
+  // 이미지도 없고 텍스트도 없을 때 → analystNotes를 메인 콘텐츠로 승격
+  const effectiveTextContent = hasText ? textContent?.trim() : (!hasImages && hasNotes ? analystNotes.trim() : null);
+  const useTextPath = !hasImages;
+
+  if (!hasImages && !effectiveTextContent) return res.status(400).json({ error: "분석할 콘텐츠가 없습니다. 스크린샷, 링크, 텍스트 중 하나를 입력해주세요." });
   if (!process.env.KKUGI_ANTHROPIC_API_KEY) return res.status(500).json({ error: "ANTHROPIC_API_KEY 미설정" });
 
   const marketLabel =
@@ -67,6 +72,9 @@ export default async function handler(req, res) {
 
   let content;
 
+  // analystNotes가 메인 콘텐츠로 승격된 경우 중복 전달 방지
+  const effectiveNotes = effectiveTextContent === analystNotes?.trim() ? null : (analystNotes?.trim() || null);
+
   if (hasImages) {
     // 스크린샷 기반 (주식)
     content = [
@@ -76,7 +84,7 @@ export default async function handler(req, res) {
       })),
       {
         type: "text",
-        text: `이 스크린샷들은 ${marketLabel} 관련 뉴스/데이터 화면입니다.${analystNotes ? `\n\n📋 아래는 유료 분석가 리포트 요약입니다. 스크린샷 분석과 함께 이 내용을 크로스체크하여 더 정확한 시황을 작성하세요:\n\n${analystNotes}\n\n---` : ""}
+        text: `이 스크린샷들은 ${marketLabel} 관련 뉴스/데이터 화면입니다.${effectiveNotes ? `\n\n📋 아래는 유료 분석가 리포트 요약입니다. 스크린샷 분석과 함께 이 내용을 크로스체크하여 더 정확한 시황을 작성하세요:\n\n${effectiveNotes}\n\n---` : ""}
 모든 스크린샷을 종합해서 시황 정보를 추출하고, 아래 JSON 형식으로만 응답하세요. 마크다운 없이 순수 JSON만.
 
 ${RULES}
@@ -85,10 +93,10 @@ ${JSON_SCHEMA}`,
       },
     ];
   } else {
-    // 텍스트/URL 기반 (부동산·가상자산·조각투자)
+    // 텍스트/URL 기반
     const URL_REGEX = /https?:\/\/[^\s\)\]\}"'<>]+/g;
-    const urls = [...new Set(textContent.match(URL_REGEX) || [])].slice(0, 10);
-    const plainText = textContent.replace(URL_REGEX, "").replace(/\s+/g, " ").trim();
+    const urls = [...new Set(effectiveTextContent.match(URL_REGEX) || [])].slice(0, 10);
+    const plainText = effectiveTextContent.replace(URL_REGEX, "").replace(/\s+/g, " ").trim();
 
     // URL 병렬 크롤링
     const fetchedParts = urls.length > 0
@@ -103,7 +111,7 @@ ${JSON_SCHEMA}`,
     content = [
       {
         type: "text",
-        text: `다음은 ${marketLabel} 관련 뉴스 및 분석 자료입니다.${analystNotes ? `\n\n📋 아래는 유료 분석가 리포트 요약입니다. 자료 분석과 함께 이 내용을 크로스체크하여 더 정확한 시황을 작성하세요:\n\n${analystNotes}\n\n---` : ""}
+        text: `다음은 ${marketLabel} 관련 뉴스 및 분석 자료입니다.${effectiveNotes ? `\n\n📋 아래는 유료 분석가 리포트 요약입니다. 자료 분석과 함께 이 내용을 크로스체크하여 더 정확한 시황을 작성하세요:\n\n${effectiveNotes}\n\n---` : ""}
 
 ===== 수집된 자료 =====
 ${combinedText}

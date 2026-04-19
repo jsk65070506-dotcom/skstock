@@ -163,8 +163,6 @@ export default function MarketAdmin() {
 
   const handleAnalyze = async () => {
     const isStock = assetTab === "stock";
-    if (isStock && !images.length) return;
-    if (!isStock && !textContent.trim()) return;
     setAnalyzing(true);
     setError(null);
     setResult(null);
@@ -460,8 +458,7 @@ export default function MarketAdmin() {
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1, marginBottom: 12 }}>STEP 3 · AI 분석</div>
           {(() => {
             const isStock = assetTab === "stock";
-            const hasContent = isStock ? images.length > 0 : textContent.trim().length > 0;
-            const disabled = !hasContent || analyzing;
+            const disabled = analyzing;
             const urlCount = !isStock ? (textContent.match(/https?:\/\/[^\s]+/g) || []).length : 0;
             return (
               <button onClick={handleAnalyze} disabled={disabled} style={{
@@ -476,11 +473,9 @@ export default function MarketAdmin() {
                       <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⟳</span>
                       {isStock ? `${images.length}장 분석 중...` : "분석 중..."}
                     </span>
-                  : hasContent
-                    ? isStock
-                      ? `✦ 분석하기 (${images.length}장 · ${marketDisplayName} ${selectedBatch})`
-                      : `✦ 분석하기 (${urlCount > 0 ? `링크 ${urlCount}개` : "텍스트"} · ${marketDisplayName} ${selectedBatch})`
-                    : isStock ? "스크린샷을 먼저 추가하세요" : "뉴스 링크나 텍스트를 먼저 입력하세요"
+                  : isStock
+                    ? `✦ 분석하기 (${images.length > 0 ? `${images.length}장 · ` : ""}${marketDisplayName} ${selectedBatch})`
+                    : `✦ 분석하기 (${urlCount > 0 ? `링크 ${urlCount}개` : textContent.trim() ? "텍스트" : "노트"} · ${marketDisplayName} ${selectedBatch})`
                 }
               </button>
             );
