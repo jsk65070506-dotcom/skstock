@@ -26,6 +26,13 @@ const actionColor = (a) =>
   a === "BUY" ? "#00e5a0" : a === "SELL" ? "#ff4d6d" : "#f5c842";
 
 const BATCH_TIMES = ["09:00", "13:00", "18:00", "23:00"];
+
+const ASSET_TABS = [
+  { key: "stock",  label: "주식",     color: "#4d8aff" },
+  { key: "realty", label: "부동산",   color: "#f5c842" },
+  { key: "crypto", label: "가상자산", color: "#a78bfa" },
+  { key: "frac",   label: "조각투자", color: "#00e5a0" },
+];
 const DATE_OPTIONS = (() => {
   const opts = [];
   for (let i = 0; i < 7; i++) {
@@ -116,7 +123,9 @@ const ResultPreview = ({ result, market }) => (
 
 // ── MAIN ────────────────────────────────────────────────────────────────────
 export default function MarketAdmin() {
-  const [market, setMarket] = useState("us");
+  const [assetTab, setAssetTab] = useState("stock");
+  const [stockMarket, setStockMarket] = useState("us"); // 주식 탭용 us/kr
+  const market = assetTab === "stock" ? stockMarket : assetTab; // 실제 market 키
   const [selectedDate, setSelectedDate] = useState(DATE_OPTIONS[0].value);
   const [selectedBatch, setSelectedBatch] = useState(BATCH_TIMES[0]);
   const [images, setImages] = useState([]);
@@ -223,7 +232,13 @@ export default function MarketAdmin() {
     }
   };
 
-  const accentColor = market === "us" ? "#4d8aff" : "#ff6b35";
+  const assetInfo = ASSET_TABS.find(a => a.key === assetTab);
+  const accentColor = assetTab === "stock"
+    ? (stockMarket === "us" ? "#4d8aff" : "#ff6b35")
+    : (assetInfo?.color || "#00e5a0");
+  const marketDisplayName = assetTab === "stock"
+    ? (stockMarket === "us" ? "미국 주식" : "한국 주식")
+    : assetInfo?.label;
   const totalSizeKB = images.reduce((s, img) => s + (img.sizeKB || 0), 0);
 
   return (
@@ -242,7 +257,11 @@ export default function MarketAdmin() {
 
       <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <div style={{ fontSize: 9, color: "#ff6b35", letterSpacing: 3, marginBottom: 4, fontWeight: 600 }}>ADMIN · 관리자</div>
-        <div style={{ fontSize: 17, fontWeight: 700 }}>꾸기 Market 업로드</div>
+        <div style={{ fontSize: 17, fontWeight: 700, display: "flex", alignItems: "baseline", gap: 6 }}>
+          <span style={{ color: "#00e5a0" }}>꾸기</span>
+          <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 500 }}>Daily Morning</span>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>업로드</span>
+        </div>
       </div>
 
       <div style={{ padding: "20px 20px 80px" }}>
@@ -250,17 +269,36 @@ export default function MarketAdmin() {
         {/* STEP 1 */}
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1, marginBottom: 12 }}>STEP 1 · 설정</div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            {[{ key: "us", label: "🇺🇸 미국", color: "#4d8aff" }, { key: "kr", label: "🇰🇷 한국", color: "#ff6b35" }].map((m) => (
-              <button key={m.key} onClick={() => { setMarket(m.key); reset(); }} style={{
-                flex: 1, padding: "9px 0", borderRadius: 10, border: "none", cursor: "pointer",
-                fontFamily: "inherit", fontSize: 12, fontWeight: 600, transition: "all 0.2s",
-                background: market === m.key ? m.color : "rgba(255,255,255,0.05)",
-                color: market === m.key ? "#fff" : "rgba(255,255,255,0.4)",
-                boxShadow: market === m.key ? `0 2px 12px ${m.color}44` : "none",
-              }}>{m.label}</button>
+
+          {/* 자산 카테고리 탭 */}
+          <div style={{ display: "flex", gap: 6, marginBottom: 10, overflowX: "auto" }}>
+            {ASSET_TABS.map((a) => (
+              <button key={a.key} onClick={() => { setAssetTab(a.key); reset(); }} style={{
+                flexShrink: 0, padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontSize: 12, fontWeight: assetTab === a.key ? 700 : 500,
+                transition: "all 0.18s",
+                background: assetTab === a.key ? a.color : "rgba(255,255,255,0.06)",
+                color: assetTab === a.key ? (a.key === "realty" || a.key === "frac" ? "#07080c" : "#fff") : "rgba(255,255,255,0.45)",
+                boxShadow: assetTab === a.key ? `0 2px 10px ${a.color}44` : "none",
+              }}>{a.label}</button>
             ))}
           </div>
+
+          {/* 주식 탭: 미국/한국 토글 */}
+          {assetTab === "stock" && (
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              {[{ key: "us", label: "🇺🇸 미국", color: "#4d8aff" }, { key: "kr", label: "🇰🇷 한국", color: "#ff6b35" }].map((m) => (
+                <button key={m.key} onClick={() => { setStockMarket(m.key); reset(); }} style={{
+                  flex: 1, padding: "9px 0", borderRadius: 10, border: "none", cursor: "pointer",
+                  fontFamily: "inherit", fontSize: 12, fontWeight: 600, transition: "all 0.2s",
+                  background: stockMarket === m.key ? m.color : "rgba(255,255,255,0.05)",
+                  color: stockMarket === m.key ? "#fff" : "rgba(255,255,255,0.4)",
+                  boxShadow: stockMarket === m.key ? `0 2px 12px ${m.color}44` : "none",
+                }}>{m.label}</button>
+              ))}
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: 8 }}>
             <select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ flex: 1, padding: "10px 12px", borderRadius: 10, fontFamily: "inherit", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#dde1ea", fontSize: 12, outline: "none", cursor: "pointer" }}>
               {DATE_OPTIONS.map((o) => <option key={o.value} value={o.value} style={{ background: "#1a1c24" }}>{o.label}</option>)}
@@ -370,7 +408,7 @@ export default function MarketAdmin() {
                   {images.length}장 분석 중...
                 </span>
               : images.length
-                ? `✦ 분석하기 (${images.length}장 · ${market === "us" ? "미국" : "한국"} ${selectedBatch})`
+                ? `✦ 분석하기 (${images.length}장 · ${marketDisplayName} ${selectedBatch})`
                 : "스크린샷을 먼저 추가하세요"
             }
           </button>
@@ -402,7 +440,7 @@ export default function MarketAdmin() {
                   cursor: publishing ? "not-allowed" : "pointer",
                   boxShadow: !publishing ? `0 4px 20px ${accentColor}44` : "none",
                 }}>
-                  {publishing ? "발행 중..." : `🚀 서비스에 발행 (${selectedDate} · ${selectedBatch})`}
+                  {publishing ? "발행 중..." : `🚀 서비스에 발행 (${marketDisplayName} · ${selectedDate} · ${selectedBatch})`}
                 </button>
               )}
               {published && (

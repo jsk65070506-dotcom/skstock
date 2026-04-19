@@ -10,7 +10,13 @@ export default async function handler(req, res) {
   if (!images?.length) return res.status(400).json({ error: "이미지가 없습니다" });
   if (!process.env.KKUGI_ANTHROPIC_API_KEY) return res.status(500).json({ error: "ANTHROPIC_API_KEY 미설정" });
 
-  const marketLabel = market === "us" ? "미국 주식시장" : "한국 주식시장";
+  const marketLabel =
+    market === "us"     ? "미국 주식시장" :
+    market === "kr"     ? "한국 주식시장" :
+    market === "realty" ? "한국 부동산 시장" :
+    market === "crypto" ? "가상자산(암호화폐) 시장" :
+    market === "frac"   ? "조각투자 시장(부동산·음악·미술·명품 등 실물자산 조각투자)" :
+    "주식시장";
 
   const content = [
     ...images.map((img) => ({
