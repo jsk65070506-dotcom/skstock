@@ -438,14 +438,21 @@ export default function MarketDaily() {
 
       {/* ── HEADER ── */}
       <div style={{ padding: "16px 16px 0", position: "sticky", top: 0, background: "#07080c", zIndex: 50 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-          <div>
-            <div style={{ fontSize: 10, color: "#00e5a0", letterSpacing: 3, marginBottom: 3, fontWeight: 500 }}>꾸기 MARKET DAILY</div>
-            <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: -0.5 }}>
-              {market === "us" ? "🇺🇸 미국" : "🇰🇷 한국"} 시황 브리핑
-            </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          {/* 타이틀 + BETA 뱃지 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 14, color: "#00e5a0", letterSpacing: 2, fontWeight: 700 }}>꾸기 MARKET DAILY</div>
+            <span style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: 1,
+              padding: "2px 7px", borderRadius: 4,
+              background: "rgba(0,229,160,0.12)",
+              color: "#00e5a0",
+              border: "1px solid rgba(0,229,160,0.3)",
+              lineHeight: 1.4,
+            }}>BETA</span>
           </div>
-          <div style={{ textAlign: "right" }}>
+          {/* 날짜 선택 + 업데이트 시각 */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
             <select
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
@@ -465,7 +472,7 @@ export default function MarketDaily() {
               ))}
             </select>
             {data && (
-              <div style={{ fontSize: 10, color: "#00e5a0", background: "rgba(0,229,160,0.08)", border: "1px solid rgba(0,229,160,0.2)", borderRadius: 5, padding: "2px 7px", marginTop: 4 }}>
+              <div style={{ fontSize: 9.5, color: "#00e5a0", background: "rgba(0,229,160,0.08)", border: "1px solid rgba(0,229,160,0.2)", borderRadius: 5, padding: "2px 7px" }}>
                 {data.fetchedAt} 업데이트
               </div>
             )}
