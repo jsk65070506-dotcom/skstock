@@ -443,8 +443,16 @@ export default function MarketDaily() {
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+
+  // 스켈레톤 4초 이상 지속 시 안내 문구로 전환
+  useEffect(() => {
+    if (!loading) { setLoadingTimeout(false); return; }
+    const t = setTimeout(() => setLoadingTimeout(true), 4000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   const fetchData = React.useCallback((isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -491,47 +499,49 @@ export default function MarketDaily() {
       <div style={{ padding: "16px 16px 0", position: "sticky", top: 0, background: "#07080c", zIndex: 50 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           {/* 타이틀 + BETA 뱃지 */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, display: "flex", alignItems: "baseline", gap: 3 }}>
-                <span style={{ color: "#34d399", fontStyle: "italic" }}>+α</span>
-              </div>
-              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.38)", letterSpacing: 0.2, lineHeight: 1 }}>월급만으론 부족한 우리를 위해</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1 }}>
+              <span style={{ color: "#34d399", fontStyle: "italic" }}>+α</span>
             </div>
-            <span style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: 1,
-              padding: "2px 7px", borderRadius: 4,
-              background: "rgba(255,255,255,0.08)",
-              color: "rgba(255,255,255,0.55)",
-              border: "1px solid rgba(255,255,255,0.2)",
-              lineHeight: 1.4,
-            }}>BETA</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 0.1, lineHeight: 1 }}>월급만으론 부족한 우리를 위해</span>
+              <span style={{
+                fontSize: 8, fontWeight: 700, letterSpacing: 1,
+                padding: "1px 5px", borderRadius: 3,
+                background: "rgba(255,255,255,0.08)",
+                color: "rgba(255,255,255,0.45)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                lineHeight: 1.5,
+              }}>BETA</span>
+            </div>
           </div>
           {/* 날짜 선택 + 업데이트 시각 */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-            <select
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: 7, color: "rgba(255,255,255,0.7)",
-                fontFamily: "inherit", fontSize: 10.5,
-                padding: "4px 22px 4px 8px", cursor: "pointer", outline: "none",
-                appearance: "none", WebkitAppearance: "none",
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-                backgroundRepeat: "no-repeat", backgroundPosition: "right 6px center",
-              }}
-            >
-              {DATE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value} style={{ background: "#1a1c24" }}>{opt.label}</option>
-              ))}
-            </select>
-            {data && (
-              <div style={{ fontSize: 9.5, color: "#34d399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", borderRadius: 5, padding: "2px 7px" }}>
-                {data.fetchedAt} 업데이트
-              </div>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <select
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 7, color: "rgba(255,255,255,0.7)",
+                  fontFamily: "inherit", fontSize: 10.5,
+                  padding: "4px 22px 4px 8px", cursor: "pointer", outline: "none",
+                  appearance: "none", WebkitAppearance: "none",
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: "no-repeat", backgroundPosition: "right 6px center",
+                }}
+              >
+                {DATE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value} style={{ background: "#1a1c24" }}>{opt.label}</option>
+                ))}
+              </select>
+              {data && (
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>
+                  · {data.fetchedAt} 업데이트
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -543,7 +553,7 @@ export default function MarketDaily() {
               padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
               fontFamily: "inherit", fontSize: 12, fontWeight: assetTab === a.key ? 700 : 500,
               transition: "all 0.18s",
-              background: assetTab === a.key ? "#34d399" : "rgba(255,255,255,0.06)",
+              background: assetTab === a.key ? "#00e5a0" : "rgba(255,255,255,0.06)",
               color: assetTab === a.key ? "#07080c" : "rgba(255,255,255,0.45)",
             }}>{a.label}</button>
           ))}
@@ -627,8 +637,19 @@ export default function MarketDaily() {
       {/* ── BODY ── */}
       <div style={{ flex: 1, padding: "14px 16px 40px" }}>
 
-        {/* 로딩 — 스켈레톤 */}
+        {/* 로딩 — 스켈레톤 (4초 이내) 또는 안내 문구 (4초 초과) */}
         {loading && (
+          loadingTimeout ? (
+            <div style={{ textAlign: "center", padding: "72px 24px" }}>
+              <div style={{ fontSize: 36, marginBottom: 16 }}>☕</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.5)", marginBottom: 8, letterSpacing: -0.3 }}>
+                오늘 브리핑을 준비 중이에요
+              </div>
+              <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.28)", lineHeight: 1.7 }}>
+                보통 오전 9시에 업데이트돼요
+              </div>
+            </div>
+          ) : (
           <div>
             <style>{`
               @keyframes shimmer {
@@ -660,6 +681,7 @@ export default function MarketDaily() {
               </div>
             ))}
           </div>
+          )
         )}
 
         {/* 데이터 없음 / 에러 */}
