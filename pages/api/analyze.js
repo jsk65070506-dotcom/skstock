@@ -23,29 +23,6 @@ const RULES = `규칙:
 - picks는 BUY/SELL/WATCH 중 하나, 최대 5개 (해당 시장에 맞는 자산/종목으로)
 - sectors는 해당 시장 주요 섹터 기준 최대 8개`;
 
-// URL에서 HTML 가져와서 텍스트만 추출 (3초 타임아웃)
-async function fetchUrlText(url) {
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 3000);
-    const r = await fetch(url, {
-      signal: ctrl.signal,
-      headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
-    });
-    clearTimeout(timer);
-    const html = await r.text();
-    const text = html
-      .replace(/<script[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 3000);
-    return `[출처: ${url}]\n${text}`;
-  } catch (e) {
-    return null; // 실패한 URL은 무시
-  }
-}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -93,34 +70,17 @@ ${JSON_SCHEMA}`,
       },
     ];
   } else {
-    // 텍스트/URL 기반
-    const URL_REGEX = /https?:\/\/[^\s\)\]\}"'<>]+/g;
-    const urls = [...new Set(effectiveTextContent.match(URL_REGEX) || [])].slice(0, 5);
-    const plainText = effectiveTextContent.replace(URL_REGEX, "").replace(/\s+/g, " ").trim();
-
-    // URL 병렬 크롤링 (전체 4초 제한)
-    const fetchedParts = urls.length > 0
-      ? await Promise.race([
-          Promise.all(urls.map(fetchUrlText)),
-          new Promise(resolve => setTimeout(() => resolve([]), 4000)),
-        ])
-      : [];
-
-    const combinedText = [
-      plainText && `[직접 입력 텍스트]\n${plainText}`,
-      ...fetchedParts,
-    ].filter(Boolean).join("\n\n---\n\n");
-
+    // 텍스트/URL 기반 (크롤링 없이 그대로 전달)
     content = [
       {
         type: "text",
-        text: `다음은 ${marketLabel} 관련 뉴스 및 분석 자료입니다.${effectiveNotes ? `\n\n📋 아래는 유료 분석가 리포트 요약입니다. 자료 분석과 함께 이 내용을 크로스체크하여 더 정확한 시황을 작성하세요:\n\n${effectiveNotes}\n\n---` : ""}
+        text: `다음은 ${marketLabel} 관련 뉴스 링크 및 텍스트 자료입니다.${effectiveNotes ? `\n\n📋 아래는 유료 분석가 리포트 요약입니다. 자료 분석과 함께 이 내용을 크로스체크하여 더 정확한 시황을 작성하세요:\n\n${effectiveNotes}\n\n---` : ""}
 
-===== 수집된 자료 =====
-${combinedText}
-======================
+===== 입력 자료 =====
+${effectiveTextContent}
+====================
 
-위 자료를 종합해서 ${marketLabel} 시황 정보를 추출하고, 아래 JSON 형식으로만 응답하세요. 마크다운 없이 순수 JSON만.
+URL 주소(도메인·경로·제목 키워드 등)와 함께 입력된 텍스트를 종합해서 ${marketLabel} 시황 정보를 추출하고, 아래 JSON 형식으로만 응답하세요. 마크다운 없이 순수 JSON만.
 
 ${RULES}
 
