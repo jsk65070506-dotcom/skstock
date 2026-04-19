@@ -23,6 +23,24 @@ const RULES = `규칙:
 - picks는 BUY/SELL/WATCH 중 하나, 최대 5개 (해당 시장에 맞는 자산/종목으로)
 - sectors는 해당 시장 주요 섹터 기준 최대 8개`;
 
+// Jina AI Reader로 URL → 본문 텍스트 변환 (5초 타임아웃)
+async function fetchUrlText(url) {
+  try {
+    const jinaUrl = `https://r.jina.ai/${url}`;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const r = await fetch(jinaUrl, {
+      signal: ctrl.signal,
+      headers: { "Accept": "text/plain" },
+    });
+    clearTimeout(timer);
+    if (!r.ok) return null;
+    const text = (await r.text()).slice(0, 3000);
+    return `[출처: ${url}]\n${text}`;
+  } catch {
+    return null;
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -70,17 +88,36 @@ ${JSON_SCHEMA}`,
       },
     ];
   } else {
-    // 텍스트/URL 기반 (크롤링 없이 그대로 전달)
+    // 텍스트/URL 기반 — Jina AI Reader로 URL 본문 추출
+    const URL_REGEX = /https?:\/\/[^\s\)\]\}"'<>]+/g;
+    const urls = [...new Set(effectiveTextContent.match(URL_REGEX) || [])].slice(0, 8);
+    const plainText = effectiveTextContent.replace(URL_REGEX, "").replace(/\s+/g, " ").trim();
+
+    // URL 병렬 처리 (전체 6초 상한)
+    const fetchedParts = urls.length > 0
+      ? await Promise.race([
+          Promise.all(urls.map(fetchUrlText)),
+          new Promise(resolve => setTimeout(() => resolve([]), 6000)),
+        ])
+      : [];
+
+    const combinedText = [
+      plainText && `[직접 입력 텍스트]\n${plainText}`,
+      ...fetchedParts,
+    ].filter(Boolean).join("\n\n---\n\n");
+
+    const finalText = combinedText || effectiveTextContent;
+
     content = [
       {
         type: "text",
-        text: `다음은 ${marketLabel} 관련 뉴스 링크 및 텍스트 자료입니다.${effectiveNotes ? `\n\n📋 아래는 유료 분석가 리포트 요약입니다. 자료 분석과 함께 이 내용을 크로스체크하여 더 정확한 시황을 작성하세요:\n\n${effectiveNotes}\n\n---` : ""}
+        text: `다음은 ${marketLabel} 관련 뉴스 및 분석 자료입니다.${effectiveNotes ? `\n\n📋 아래는 유료 분석가 리포트 요약입니다. 자료 분석과 함께 이 내용을 크로스체크하여 더 정확한 시황을 작성하세요:\n\n${effectiveNotes}\n\n---` : ""}
 
-===== 입력 자료 =====
-${effectiveTextContent}
-====================
+===== 수집된 자료 =====
+${finalText}
+======================
 
-URL 주소(도메인·경로·제목 키워드 등)와 함께 입력된 텍스트를 종합해서 ${marketLabel} 시황 정보를 추출하고, 아래 JSON 형식으로만 응답하세요. 마크다운 없이 순수 JSON만.
+위 자료를 종합해서 ${marketLabel} 시황 정보를 추출하고, 아래 JSON 형식으로만 응답하세요. 마크다운 없이 순수 JSON만.
 
 ${RULES}
 
