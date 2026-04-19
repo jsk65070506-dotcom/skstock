@@ -23,14 +23,14 @@ const RULES = `규칙:
 - picks는 BUY/SELL/WATCH 중 하나, 최대 5개 (해당 시장에 맞는 자산/종목으로)
 - sectors는 해당 시장 주요 섹터 기준 최대 8개`;
 
-// URL에서 HTML 가져와서 텍스트만 추출
+// URL에서 HTML 가져와서 텍스트만 추출 (3초 타임아웃)
 async function fetchUrlText(url) {
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 7000);
+    const timer = setTimeout(() => ctrl.abort(), 3000);
     const r = await fetch(url, {
       signal: ctrl.signal,
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; KkugiBot/1.0)" },
+      headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
     });
     clearTimeout(timer);
     const html = await r.text();
@@ -40,10 +40,10 @@ async function fetchUrlText(url) {
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim()
-      .slice(0, 4000);
+      .slice(0, 3000);
     return `[출처: ${url}]\n${text}`;
   } catch (e) {
-    return `[출처: ${url}]\n(크롤링 실패: ${e.message?.slice(0, 80)})`;
+    return null; // 실패한 URL은 무시
   }
 }
 
@@ -95,12 +95,15 @@ ${JSON_SCHEMA}`,
   } else {
     // 텍스트/URL 기반
     const URL_REGEX = /https?:\/\/[^\s\)\]\}"'<>]+/g;
-    const urls = [...new Set(effectiveTextContent.match(URL_REGEX) || [])].slice(0, 10);
+    const urls = [...new Set(effectiveTextContent.match(URL_REGEX) || [])].slice(0, 5);
     const plainText = effectiveTextContent.replace(URL_REGEX, "").replace(/\s+/g, " ").trim();
 
-    // URL 병렬 크롤링
+    // URL 병렬 크롤링 (전체 4초 제한)
     const fetchedParts = urls.length > 0
-      ? await Promise.all(urls.map(fetchUrlText))
+      ? await Promise.race([
+          Promise.all(urls.map(fetchUrlText)),
+          new Promise(resolve => setTimeout(() => resolve([]), 4000)),
+        ])
       : [];
 
     const combinedText = [
