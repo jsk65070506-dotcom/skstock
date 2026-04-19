@@ -356,8 +356,8 @@ const ScreenshotUploadSheet = ({ market, onClose, onResult }) => {
               ) : (
                 <div key={slot} className="tap" onClick={() => images.length === slot && inputRef.current?.click()} style={{
                   flex: 1, aspectRatio: "9/16", borderRadius: 12,
-                  border: `2px dashed ${images.length === slot ? "rgba(0,229,160,0.35)" : "rgba(255,255,255,0.08)"}`,
-                  background: images.length === slot ? "rgba(0,229,160,0.04)" : "rgba(255,255,255,0.02)",
+                  border: `2px dashed ${images.length === slot ? "rgba(52,211,153,0.35)" : "rgba(255,255,255,0.08)"}`,
+                  background: images.length === slot ? "rgba(52,211,153,0.04)" : "rgba(255,255,255,0.02)",
                   display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
                   opacity: images.length < slot ? 0.35 : 1,
                   cursor: images.length === slot ? "pointer" : "default",
@@ -399,7 +399,7 @@ const ScreenshotUploadSheet = ({ market, onClose, onResult }) => {
             style={{
               width: "100%", padding: "14px 0", borderRadius: 12, border: "none", cursor: images.length && !analyzing ? "pointer" : "not-allowed",
               fontFamily: "inherit", fontSize: 14, fontWeight: 700,
-              background: images.length && !analyzing ? "#00e5a0" : "rgba(255,255,255,0.07)",
+              background: images.length && !analyzing ? "#34d399" : "rgba(255,255,255,0.07)",
               color: images.length && !analyzing ? "#07080c" : "rgba(255,255,255,0.25)",
               transition: "all 0.2s",
             }}
@@ -492,9 +492,11 @@ export default function MarketDaily() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           {/* 타이틀 + BETA 뱃지 */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ fontSize: 14, letterSpacing: 0.3, fontWeight: 700, display: "flex", alignItems: "baseline", gap: 5 }}>
-              <span style={{ color: "#00e5a0" }}>꾸기</span>
-              <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 500 }}>Daily Morning</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, display: "flex", alignItems: "baseline", gap: 3 }}>
+                <span style={{ color: "#34d399", fontStyle: "italic" }}>+α</span>
+              </div>
+              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.38)", letterSpacing: 0.2, lineHeight: 1 }}>월급만으론 부족한 우리를 위해</div>
             </div>
             <span style={{
               fontSize: 9, fontWeight: 700, letterSpacing: 1,
@@ -526,7 +528,7 @@ export default function MarketDaily() {
               ))}
             </select>
             {data && (
-              <div style={{ fontSize: 9.5, color: "#00e5a0", background: "rgba(0,229,160,0.08)", border: "1px solid rgba(0,229,160,0.2)", borderRadius: 5, padding: "2px 7px" }}>
+              <div style={{ fontSize: 9.5, color: "#34d399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", borderRadius: 5, padding: "2px 7px" }}>
                 {data.fetchedAt} 업데이트
               </div>
             )}
@@ -541,7 +543,7 @@ export default function MarketDaily() {
               padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
               fontFamily: "inherit", fontSize: 12, fontWeight: assetTab === a.key ? 700 : 500,
               transition: "all 0.18s",
-              background: assetTab === a.key ? "#00e5a0" : "rgba(255,255,255,0.06)",
+              background: assetTab === a.key ? "#34d399" : "rgba(255,255,255,0.06)",
               color: assetTab === a.key ? "#07080c" : "rgba(255,255,255,0.45)",
             }}>{a.label}</button>
           ))}
@@ -586,7 +588,7 @@ export default function MarketDaily() {
               ? fgNum < 25  ? { text: "🔴 극단적 공포", color: "#ff4d6d" }
               : fgNum < 45  ? { text: "🟡 공포",        color: "#f5c842" }
               : fgNum < 55  ? { text: "⚪ 중립",         color: "rgba(255,255,255,0.55)" }
-              : fgNum < 75  ? { text: "🟢 탐욕",         color: "#00e5a0" }
+              : fgNum < 75  ? { text: "🟢 탐욕",         color: "#34d399" }
               :               { text: "🔵 극단적 탐욕",  color: "#4d8aff" }
               : null;
             return (
@@ -698,7 +700,7 @@ export default function MarketDaily() {
                 </div>
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", lineHeight: 1.9 }}>
                   주말엔 포지션도 내려놓고 쉬어가세요<br />
-                  꾸기는 월요일 아침에 깨어있을게요 ☀️
+                  +α는 월요일 아침에 깨어있을게요 ☀️
                 </div>
               </div>
             );
@@ -730,10 +732,10 @@ export default function MarketDaily() {
         {!loading && data && (<>
 
         {/* AI 요약 */}
-        <div style={{ marginBottom: 16, borderRadius: 12, border: "1px solid rgba(0,229,160,0.18)", overflow: "hidden" }}>
-          <div style={{ background: "rgba(0,229,160,0.05)", padding: "13px 14px" }}>
+        <div style={{ marginBottom: 16, borderRadius: 12, border: "1px solid rgba(52,211,153,0.18)", overflow: "hidden" }}>
+          <div style={{ background: "rgba(52,211,153,0.05)", padding: "13px 14px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ fontSize: 10, color: "#00e5a0", letterSpacing: 1.5, fontWeight: 500 }}>✦ AI 시황 요약</div>
+              <div style={{ fontSize: 10, color: "#34d399", letterSpacing: 1.5, fontWeight: 500 }}>✦ AI 시황 요약</div>
               <div className="tap" onClick={() => fetchData(true)} style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 5, padding: "3px 9px", cursor: "pointer", opacity: refreshing ? 0.5 : 1 }}>{refreshing ? "⏳" : "↻"} 최신으로</div>
             </div>
             <p style={{ fontSize: 12.5, lineHeight: 1.75, color: "rgba(255,255,255,0.78)" }}>{data.summary}</p>
@@ -743,23 +745,23 @@ export default function MarketDaily() {
                 onClick={() => { setTab(tab === "picks" ? "news" : "picks"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                 style={{
                   marginTop: 12, paddingTop: 10,
-                  borderTop: "1px solid rgba(0,229,160,0.15)",
+                  borderTop: "1px solid rgba(52,211,153,0.15)",
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 11, color: "#00e5a0", fontWeight: 600 }}>
+                  <span style={{ fontSize: 11, color: "#34d399", fontWeight: 600 }}>
                     {tab === "picks" ? "종목 닫기" : "관련 종목 보기"}
                   </span>
                   <span style={{
                     fontSize: 10, fontWeight: 700,
-                    background: "rgba(0,229,160,0.12)", color: "#00e5a0",
-                    border: "1px solid rgba(0,229,160,0.25)",
+                    background: "rgba(52,211,153,0.12)", color: "#34d399",
+                    border: "1px solid rgba(52,211,153,0.25)",
                     borderRadius: 4, padding: "1px 6px",
                   }}>{data.picks.length}</span>
                 </div>
                 <span style={{
-                  fontSize: 13, color: "#00e5a0", opacity: 0.7,
+                  fontSize: 13, color: "#34d399", opacity: 0.7,
                   display: "inline-block",
                   transform: tab === "picks" ? "rotate(90deg)" : "rotate(0deg)",
                   transition: "transform 0.2s ease",

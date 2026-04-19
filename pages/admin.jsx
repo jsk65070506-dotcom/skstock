@@ -24,7 +24,7 @@ const toBase64 = (file) => new Promise((res, rej) => {
 });
 
 const actionColor = (a) =>
-  a === "BUY" ? "#00e5a0" : a === "SELL" ? "#ff4d6d" : "#f5c842";
+  a === "BUY" ? "#34d399" : a === "SELL" ? "#ff4d6d" : "#f5c842";
 
 const BATCH_TIMES = ["09:00", "13:00", "18:00", "23:00"];
 
@@ -32,7 +32,7 @@ const ASSET_TABS = [
   { key: "stock",  label: "주식",     color: "#4d8aff" },
   { key: "realty", label: "부동산",   color: "#f5c842" },
   { key: "crypto", label: "가상자산", color: "#a78bfa" },
-  { key: "frac",   label: "실물자산", color: "#00e5a0" },
+  { key: "frac",   label: "실물자산", color: "#34d399" },
 ];
 const DATE_OPTIONS = (() => {
   const opts = [];
@@ -54,16 +54,16 @@ const ResultPreview = ({ result, market }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
       <span style={{
         fontSize: 10, padding: "3px 10px", borderRadius: 20, fontWeight: 600, flexShrink: 0,
-        background: result.sentiment === "bullish" ? "rgba(0,229,160,0.12)" : "rgba(255,77,109,0.12)",
-        color: result.sentiment === "bullish" ? "#00e5a0" : "#ff4d6d",
-        border: `1px solid ${result.sentiment === "bullish" ? "rgba(0,229,160,0.3)" : "rgba(255,77,109,0.3)"}`,
+        background: result.sentiment === "bullish" ? "rgba(52,211,153,0.12)" : "rgba(255,77,109,0.12)",
+        color: result.sentiment === "bullish" ? "#34d399" : "#ff4d6d",
+        border: `1px solid ${result.sentiment === "bullish" ? "rgba(52,211,153,0.3)" : "rgba(255,77,109,0.3)"}`,
       }}>
         {result.sentiment === "bullish" ? "▲ 강세" : "▼ 약세"}
       </span>
       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>{result.oneLineSummary}</span>
     </div>
 
-    <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(0,229,160,0.04)", border: "1px solid rgba(0,229,160,0.15)", marginBottom: 12 }}>
+    <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(52,211,153,0.04)", border: "1px solid rgba(52,211,153,0.15)", marginBottom: 12 }}>
       <p style={{ fontSize: 12, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", margin: 0 }}>{result.summary}</p>
     </div>
 
@@ -73,7 +73,7 @@ const ResultPreview = ({ result, market }) => (
         {result.issues.map((item, i) => (
           <div key={i} style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", marginBottom: 6 }}>
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
-              <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, fontWeight: 600, background: item.sentiment === "bullish" ? "rgba(0,229,160,0.1)" : "rgba(255,77,109,0.1)", color: item.sentiment === "bullish" ? "#00e5a0" : "#ff4d6d" }}>{item.sentiment === "bullish" ? "▲" : "▼"}</span>
+              <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, fontWeight: 600, background: item.sentiment === "bullish" ? "rgba(52,211,153,0.1)" : "rgba(255,77,109,0.1)", color: item.sentiment === "bullish" ? "#34d399" : "#ff4d6d" }}>{item.sentiment === "bullish" ? "▲" : "▼"}</span>
               <span style={{ fontSize: 9, color: "rgba(255,255,255,0.25)" }}>#{item.sector}</span>
             </div>
             <div style={{ fontSize: 12, fontWeight: 600, color: "#dde1ea", marginBottom: 4 }}>{item.title}</div>
@@ -111,10 +111,10 @@ const ResultPreview = ({ result, market }) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
             <div style={{ width: 70, fontSize: 11, color: "rgba(255,255,255,0.6)", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
             <div style={{ flex: 1, height: 3, background: "rgba(255,255,255,0.07)", borderRadius: 2, overflow: "hidden" }}>
-              <div style={{ width: `${s.score}%`, height: "100%", borderRadius: 2, background: s.score > 70 ? "#00e5a0" : s.score > 50 ? "#f5c842" : "#ff4d6d" }} />
+              <div style={{ width: `${s.score}%`, height: "100%", borderRadius: 2, background: s.score > 70 ? "#34d399" : s.score > 50 ? "#f5c842" : "#ff4d6d" }} />
             </div>
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", width: 22, textAlign: "right", flexShrink: 0 }}>{s.score}</span>
-            <span style={{ fontSize: 10, color: s.trend?.startsWith("▲") ? "#00e5a0" : "#ff4d6d", width: 60, textAlign: "right", flexShrink: 0 }}>{s.trend}</span>
+            <span style={{ fontSize: 10, color: s.trend?.startsWith("▲") ? "#34d399" : "#ff4d6d", width: 60, textAlign: "right", flexShrink: 0 }}>{s.trend}</span>
           </div>
         ))}
       </div>
@@ -147,8 +147,8 @@ function PasswordScreen({ onSuccess }) {
         body { background: #07080c; }
       `}</style>
       <div style={{ fontSize: 28, marginBottom: 16 }}>🔒</div>
-      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
-        <span style={{ color: "#00e5a0" }}>꾸기</span> Admin
+      <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 6, fontStyle: "italic" }}>
+        <span style={{ color: "#34d399" }}>+α</span> <span style={{ fontStyle: "normal", fontWeight: 400, fontSize: 13, color: "rgba(255,255,255,0.5)" }}>관리자</span>
       </div>
       <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 28 }}>관리자 비밀번호를 입력하세요</div>
       <input
@@ -170,7 +170,7 @@ function PasswordScreen({ onSuccess }) {
       <button onClick={handleSubmit} style={{
         width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
         fontFamily: "inherit", fontSize: 13, fontWeight: 700, marginTop: error ? 0 : 8,
-        background: "#00e5a0", color: "#07080c", cursor: "pointer",
+        background: "#34d399", color: "#07080c", cursor: "pointer",
       }}>
         입장하기 →
       </button>
@@ -299,7 +299,7 @@ export default function MarketAdmin() {
   const assetInfo = ASSET_TABS.find(a => a.key === assetTab);
   const accentColor = assetTab === "stock"
     ? (stockMarket === "us" ? "#4d8aff" : "#ff6b35")
-    : (assetInfo?.color || "#00e5a0");
+    : (assetInfo?.color || "#34d399");
   const marketDisplayName = assetTab === "stock"
     ? (stockMarket === "us" ? "미국 주식" : "한국 주식")
     : assetInfo?.label;
@@ -323,10 +323,9 @@ export default function MarketAdmin() {
 
       <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <div style={{ fontSize: 9, color: "#ff6b35", letterSpacing: 3, marginBottom: 4, fontWeight: 600 }}>ADMIN · 관리자</div>
-        <div style={{ fontSize: 17, fontWeight: 700, display: "flex", alignItems: "baseline", gap: 6 }}>
-          <span style={{ color: "#00e5a0" }}>꾸기</span>
-          <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 500 }}>Daily Morning</span>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>업로드</span>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span style={{ fontSize: 20, fontWeight: 800, color: "#34d399", fontStyle: "italic" }}>+α</span>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>콘텐츠 업로드</span>
         </div>
       </div>
 
@@ -414,9 +413,9 @@ export default function MarketAdmin() {
                 <div className="tap" onClick={() => inputRef.current?.click()}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
-                  style={{ padding: "14px", borderRadius: 10, border: "2px dashed rgba(0,229,160,0.3)", background: "rgba(0,229,160,0.03)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer" }}>
+                  style={{ padding: "14px", borderRadius: 10, border: "2px dashed rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.03)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer" }}>
                   <span style={{ fontSize: 16 }}>📸</span>
-                  <span style={{ fontSize: 12, color: "#00e5a0", fontWeight: 600 }}>
+                  <span style={{ fontSize: 12, color: "#34d399", fontWeight: 600 }}>
                     {images.length === 0 ? "스크린샷 추가 (최대 30장)" : `더 추가하기 (${30 - images.length}장 남음)`}
                   </span>
                 </div>
@@ -539,7 +538,7 @@ export default function MarketAdmin() {
               <button onClick={handleAnalyze} disabled={disabled} style={{
                 width: "100%", padding: "14px 0", borderRadius: 12, border: "none",
                 fontFamily: "inherit", fontSize: 13, fontWeight: 700, transition: "all 0.2s",
-                background: disabled ? "rgba(255,255,255,0.06)" : "#00e5a0",
+                background: disabled ? "rgba(255,255,255,0.06)" : "#34d399",
                 color: disabled ? "rgba(255,255,255,0.2)" : "#07080c",
                 cursor: disabled ? "not-allowed" : "pointer",
                 opacity: (!analyzing && !hasContent) ? 0.4 : 1,
@@ -573,14 +572,14 @@ export default function MarketAdmin() {
               <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1, marginBottom: 12 }}>STEP 5 · 서비스 반영</div>
               {published ? (
                 <div>
-                  <div style={{ padding: "14px 0", borderRadius: 12, background: "rgba(0,229,160,0.08)", border: "1px solid rgba(0,229,160,0.25)", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#00e5a0", marginBottom: 10 }}>
+                  <div style={{ padding: "14px 0", borderRadius: 12, background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.25)", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#34d399", marginBottom: 10 }}>
                     ✅ 분석 완료!
                   </div>
                   <a href="/" style={{ display: "block", textDecoration: "none" }}>
                     <div style={{
-                      padding: "13px 0", borderRadius: 12, border: "1px solid rgba(0,229,160,0.35)",
-                      textAlign: "center", fontSize: 13, fontWeight: 700, color: "#00e5a0",
-                      background: "rgba(0,229,160,0.06)", cursor: "pointer",
+                      padding: "13px 0", borderRadius: 12, border: "1px solid rgba(52,211,153,0.35)",
+                      textAlign: "center", fontSize: 13, fontWeight: 700, color: "#34d399",
+                      background: "rgba(52,211,153,0.06)", cursor: "pointer",
                     }}>
                       메인에서 확인하기 →
                     </div>
