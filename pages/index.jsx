@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Head from "next/head";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 const normalizeData = (json) => ({
@@ -422,7 +423,32 @@ export default function MarketDaily() {
 
   const switchMarket = (mkt) => { setMarket(mkt); setTab("news"); setExpanded(null); };
 
+  const OG_URL = "https://skstock.vercel.app";
+  const OG_IMAGE = `${OG_URL}/api/og`;
+  const OG_TITLE = "꾸기 MARKET DAILY";
+  const OG_DESC = "AI가 분석하는 매일 아침 미국·한국 시황 브리핑";
+
   return (
+    <>
+      <Head>
+        <title>{OG_TITLE}</title>
+        <meta name="description" content={OG_DESC} />
+
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={OG_URL} />
+        <meta property="og:title" content={OG_TITLE} />
+        <meta property="og:description" content={OG_DESC} />
+        <meta property="og:image" content={OG_IMAGE} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+
+        {/* Twitter / KakaoTalk */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={OG_TITLE} />
+        <meta name="twitter:description" content={OG_DESC} />
+        <meta name="twitter:image" content={OG_IMAGE} />
+      </Head>
     <div style={{
       fontFamily: "'IBM Plex Mono', monospace",
       background: "#07080c", minHeight: "100vh",
@@ -799,5 +825,6 @@ export default function MarketDaily() {
 
       {/* IndexDetailSheet: 실시간 데이터 연동 전까지 비활성화 */}
     </div>
+    </>
   );
 }
