@@ -129,6 +129,7 @@ export default function MarketAdmin() {
   const [selectedDate, setSelectedDate] = useState(DATE_OPTIONS[0].value);
   const [selectedBatch, setSelectedBatch] = useState(BATCH_TIMES[0]);
   const [images, setImages] = useState([]);
+  const [textContent, setTextContent] = useState("");
   const [analystNotes, setAnalystNotes] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
@@ -158,23 +159,25 @@ export default function MarketAdmin() {
   };
 
   const removeImage = (i) => { setImages((prev) => prev.filter((_, idx) => idx !== i)); setResult(null); };
-  const reset = () => { setImages([]); setAnalystNotes(""); setResult(null); setPublished(false); setError(null); };
+  const reset = () => { setImages([]); setTextContent(""); setAnalystNotes(""); setResult(null); setPublished(false); setError(null); };
 
   const handleAnalyze = async () => {
-    if (!images.length) return;
+    const isStock = assetTab === "stock";
+    if (isStock && !images.length) return;
+    if (!isStock && !textContent.trim()) return;
     setAnalyzing(true);
     setError(null);
     setResult(null);
 
     try {
+      const body = isStock
+        ? { images: images.map((img) => ({ base64: img.base64, mediaType: img.mediaType })), market, analystNotes: analystNotes.trim() || null }
+        : { textContent: textContent.trim(), market, analystNotes: analystNotes.trim() || null };
+
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          images: images.map((img) => ({ base64: img.base64, mediaType: img.mediaType })),
-          market,
-          analystNotes: analystNotes.trim() || null,
-        }),
+        body: JSON.stringify(body),
       });
 
       const rawText = await res.text();
@@ -311,47 +314,107 @@ export default function MarketAdmin() {
 
         {/* STEP 2 */}
         <div style={{ marginBottom: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1 }}>
-              STEP 2 · 스크린샷 ({images.length}/30{images.length > 0 ? ` · ${totalSizeKB}KB` : ""})
-            </div>
-            {images.length > 0 && <div className="tap" onClick={reset} style={{ fontSize: 10, color: "rgba(255,77,109,0.7)" }}>전체 초기화</div>}
-          </div>
-
-          {images.length > 0 && (
-            <div style={{ marginBottom: 10, borderRadius: 10, border: "1px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
-              {images.map((img, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderBottom: i < images.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", background: "rgba(255,255,255,0.02)" }}>
-                  <span style={{ fontSize: 14, flexShrink: 0 }}>🖼️</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{img.name}</div>
-                    <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>{img.sizeKB} KB</div>
-                  </div>
-                  <div className="tap" onClick={() => removeImage(i)} style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", padding: "2px 6px", flexShrink: 0 }}>✕</div>
+          {assetTab === "stock" ? (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1 }}>
+                  STEP 2 · 스크린샷 ({images.length}/30{images.length > 0 ? ` · ${totalSizeKB}KB` : ""})
                 </div>
-              ))}
-            </div>
+                {images.length > 0 && <div className="tap" onClick={reset} style={{ fontSize: 10, color: "rgba(255,77,109,0.7)" }}>전체 초기화</div>}
+              </div>
+
+              {images.length > 0 && (
+                <div style={{ marginBottom: 10, borderRadius: 10, border: "1px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
+                  {images.map((img, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderBottom: i < images.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", background: "rgba(255,255,255,0.02)" }}>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>🖼️</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{img.name}</div>
+                        <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>{img.sizeKB} KB</div>
+                      </div>
+                      <div className="tap" onClick={() => removeImage(i)} style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", padding: "2px 6px", flexShrink: 0 }}>✕</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {images.length < 30 && (
+                <div className="tap" onClick={() => inputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
+                  style={{ padding: "14px", borderRadius: 10, border: "2px dashed rgba(0,229,160,0.3)", background: "rgba(0,229,160,0.03)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer" }}>
+                  <span style={{ fontSize: 16 }}>📸</span>
+                  <span style={{ fontSize: 12, color: "#00e5a0", fontWeight: 600 }}>
+                    {images.length === 0 ? "스크린샷 추가 (최대 30장)" : `더 추가하기 (${30 - images.length}장 남음)`}
+                  </span>
+                </div>
+              )}
+
+              <input ref={inputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
+
+              <div style={{ marginTop: 8, padding: "9px 12px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.22)", lineHeight: 1.8 }}>
+                  💡 뉴스 헤드라인 · 증권사 리포트 · 지수 화면 · 시황 채널 캡처
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1 }}>
+                  STEP 2 · 뉴스 링크 / 텍스트
+                </div>
+                {textContent && (
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    {(() => {
+                      const urls = textContent.match(/https?:\/\/[^\s]+/g) || [];
+                      return urls.length > 0 && (
+                        <span style={{ fontSize: 9.5, color: `${accentColor}99` }}>🔗 링크 {urls.length}개 감지</span>
+                      );
+                    })()}
+                    <div className="tap" onClick={() => setTextContent("")} style={{ fontSize: 9.5, color: "rgba(255,77,109,0.6)" }}>초기화</div>
+                  </div>
+                )}
+              </div>
+
+              <textarea
+                value={textContent}
+                onChange={(e) => { setTextContent(e.target.value); setResult(null); setPublished(false); }}
+                placeholder={`뉴스 기사 URL이나 텍스트를 붙여넣으세요.\n링크와 텍스트를 섞어서 넣어도 자동으로 구분해요.\n\nhttps://news.example.com/article1\nhttps://news.example.com/article2\n\n또는 직접 기사 본문을 붙여넣어도 됩니다.`}
+                style={{
+                  width: "100%",
+                  minHeight: 160,
+                  padding: "14px",
+                  borderRadius: 10,
+                  border: textContent
+                    ? `1px solid ${accentColor}55`
+                    : "1px solid rgba(255,255,255,0.08)",
+                  background: textContent
+                    ? `${accentColor}08`
+                    : "rgba(255,255,255,0.02)",
+                  color: "#dde1ea",
+                  fontSize: 12,
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  lineHeight: 1.7,
+                  resize: "vertical",
+                  outline: "none",
+                  transition: "border 0.2s, background 0.2s",
+                }}
+              />
+              {textContent && (
+                <div style={{ marginTop: 6, fontSize: 9.5, color: "rgba(255,255,255,0.2)" }}>
+                  {textContent.length}자 입력됨 · URL은 서버에서 자동 크롤링
+                </div>
+              )}
+              {!textContent && (
+                <div style={{ marginTop: 8, padding: "9px 12px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.22)", lineHeight: 1.8 }}>
+                    💡 링크·텍스트 혼합 OK · URL은 자동 크롤링 · 최대 10개 링크
+                  </div>
+                </div>
+              )}
+            </>
           )}
-
-          {images.length < 30 && (
-            <div className="tap" onClick={() => inputRef.current?.click()}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
-              style={{ padding: "14px", borderRadius: 10, border: "2px dashed rgba(0,229,160,0.3)", background: "rgba(0,229,160,0.03)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer" }}>
-              <span style={{ fontSize: 16 }}>📸</span>
-              <span style={{ fontSize: 12, color: "#00e5a0", fontWeight: 600 }}>
-                {images.length === 0 ? "스크린샷 추가 (최대 30장)" : `더 추가하기 (${30 - images.length}장 남음)`}
-              </span>
-            </div>
-          )}
-
-          <input ref={inputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
-
-          <div style={{ marginTop: 8, padding: "9px 12px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-            <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.22)", lineHeight: 1.8 }}>
-              💡 뉴스 헤드라인 · 증권사 리포트 · 지수 화면 · 시황 채널 캡처
-            </div>
-          </div>
         </div>
 
         {/* STEP 2.5 */}
@@ -395,23 +458,33 @@ export default function MarketAdmin() {
         {/* STEP 3 */}
         <div style={{ marginBottom: 8 }}>
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1, marginBottom: 12 }}>STEP 3 · AI 분석</div>
-          <button onClick={handleAnalyze} disabled={!images.length || analyzing} style={{
-            width: "100%", padding: "14px 0", borderRadius: 12, border: "none",
-            fontFamily: "inherit", fontSize: 13, fontWeight: 700, transition: "all 0.2s",
-            background: (!images.length || analyzing) ? "rgba(255,255,255,0.06)" : "#00e5a0",
-            color: (!images.length || analyzing) ? "rgba(255,255,255,0.2)" : "#07080c",
-            cursor: (!images.length || analyzing) ? "not-allowed" : "pointer",
-          }}>
-            {analyzing
-              ? <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⟳</span>
-                  {images.length}장 분석 중...
-                </span>
-              : images.length
-                ? `✦ 분석하기 (${images.length}장 · ${marketDisplayName} ${selectedBatch})`
-                : "스크린샷을 먼저 추가하세요"
-            }
-          </button>
+          {(() => {
+            const isStock = assetTab === "stock";
+            const hasContent = isStock ? images.length > 0 : textContent.trim().length > 0;
+            const disabled = !hasContent || analyzing;
+            const urlCount = !isStock ? (textContent.match(/https?:\/\/[^\s]+/g) || []).length : 0;
+            return (
+              <button onClick={handleAnalyze} disabled={disabled} style={{
+                width: "100%", padding: "14px 0", borderRadius: 12, border: "none",
+                fontFamily: "inherit", fontSize: 13, fontWeight: 700, transition: "all 0.2s",
+                background: disabled ? "rgba(255,255,255,0.06)" : "#00e5a0",
+                color: disabled ? "rgba(255,255,255,0.2)" : "#07080c",
+                cursor: disabled ? "not-allowed" : "pointer",
+              }}>
+                {analyzing
+                  ? <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                      <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⟳</span>
+                      {isStock ? `${images.length}장 분석 중...` : "분석 중..."}
+                    </span>
+                  : hasContent
+                    ? isStock
+                      ? `✦ 분석하기 (${images.length}장 · ${marketDisplayName} ${selectedBatch})`
+                      : `✦ 분석하기 (${urlCount > 0 ? `링크 ${urlCount}개` : "텍스트"} · ${marketDisplayName} ${selectedBatch})`
+                    : isStock ? "스크린샷을 먼저 추가하세요" : "뉴스 링크나 텍스트를 먼저 입력하세요"
+                }
+              </button>
+            );
+          })()}
         </div>
 
         {error && (
