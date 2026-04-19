@@ -905,6 +905,24 @@ export default function MarketDaily() {
         </>)}
       </div>
 
+      {/* 포트폴리오 진단 링크 */}
+      <div style={{ padding: "8px 20px 32px", textAlign: "center" }}>
+        <a href="/portfolio" style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "10px 20px", borderRadius: 12,
+          border: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(255,255,255,0.02)",
+          color: "rgba(255,255,255,0.45)",
+          fontSize: 12, fontWeight: 600,
+          textDecoration: "none", fontFamily: "inherit",
+          letterSpacing: 0.2,
+        }}>
+          <span style={{ color: "#00e5a0", fontSize: 14 }}>◎</span>
+          포트폴리오 진단
+          <span style={{ opacity: 0.4, fontSize: 11 }}>→</span>
+        </a>
+      </div>
+
       {/* IndexDetailSheet: 실시간 데이터 연동 전까지 비활성화 */}
     </div>
     <AdBanner />
