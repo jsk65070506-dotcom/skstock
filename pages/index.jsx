@@ -425,8 +425,8 @@ export default function MarketDaily() {
 
   const OG_URL = "https://skstock.vercel.app";
   const OG_IMAGE = `${OG_URL}/api/og`;
-  const OG_TITLE = "꾸기 MARKET DAILY";
-  const OG_DESC = "AI가 분석하는 매일 아침 미국·한국 시황 브리핑";
+  const OG_TITLE = "꾸기 Daily Morning";
+  const OG_DESC = "AI가 분석하는 매일 아침 주식·부동산·코인 브리핑";
 
   return (
     <>
@@ -470,7 +470,10 @@ export default function MarketDaily() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           {/* 타이틀 + BETA 뱃지 */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ fontSize: 14, color: "#00e5a0", letterSpacing: 2, fontWeight: 700 }}>꾸기 MARKET DAILY</div>
+            <div style={{ fontSize: 14, letterSpacing: 0.3, fontWeight: 700, display: "flex", alignItems: "baseline", gap: 5 }}>
+              <span style={{ color: "#00e5a0" }}>꾸기</span>
+              <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 500 }}>Daily Morning</span>
+            </div>
             <span style={{
               fontSize: 9, fontWeight: 700, letterSpacing: 1,
               padding: "2px 7px", borderRadius: 4,
