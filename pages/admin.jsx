@@ -31,7 +31,7 @@ const ASSET_TABS = [
   { key: "stock",  label: "주식",     color: "#4d8aff" },
   { key: "realty", label: "부동산",   color: "#f5c842" },
   { key: "crypto", label: "가상자산", color: "#a78bfa" },
-  { key: "frac",   label: "조각투자", color: "#00e5a0" },
+  { key: "frac",   label: "실물자산", color: "#00e5a0" },
 ];
 const DATE_OPTIONS = (() => {
   const opts = [];
@@ -121,8 +121,68 @@ const ResultPreview = ({ result, market }) => (
   </div>
 );
 
+// ── PASSWORD SCREEN ─────────────────────────────────────────────────────────
+const ADMIN_PASSWORD = "kkugi2024";
+
+function PasswordScreen({ onSuccess }) {
+  const [input, setInput] = useState("");
+  const [error, setError] = useState(false);
+
+  const handleSubmit = () => {
+    if (input === ADMIN_PASSWORD) {
+      if (typeof window !== "undefined") sessionStorage.setItem("adminAuth", "true");
+      onSuccess();
+    } else {
+      setError(true);
+      setInput("");
+    }
+  };
+
+  return (
+    <div style={{ fontFamily: "'IBM Plex Mono', monospace", background: "#07080c", minHeight: "100vh", maxWidth: 480, margin: "0 auto", color: "#dde1ea", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 32px" }}>
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #07080c; }
+      `}</style>
+      <div style={{ fontSize: 28, marginBottom: 16 }}>🔒</div>
+      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
+        <span style={{ color: "#00e5a0" }}>꾸기</span> Admin
+      </div>
+      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 28 }}>관리자 비밀번호를 입력하세요</div>
+      <input
+        type="password"
+        value={input}
+        onChange={(e) => { setInput(e.target.value); setError(false); }}
+        onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+        placeholder="비밀번호"
+        autoFocus
+        style={{
+          width: "100%", padding: "13px 16px", borderRadius: 12,
+          border: error ? "1px solid rgba(255,77,109,0.6)" : "1px solid rgba(255,255,255,0.12)",
+          background: "rgba(255,255,255,0.04)", color: "#dde1ea",
+          fontFamily: "inherit", fontSize: 14, outline: "none",
+          marginBottom: 8, textAlign: "center", letterSpacing: 4,
+        }}
+      />
+      {error && <div style={{ fontSize: 11, color: "#ff4d6d", marginBottom: 12 }}>비밀번호가 틀렸어요</div>}
+      <button onClick={handleSubmit} style={{
+        width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
+        fontFamily: "inherit", fontSize: 13, fontWeight: 700, marginTop: error ? 0 : 8,
+        background: "#00e5a0", color: "#07080c", cursor: "pointer",
+      }}>
+        입장하기 →
+      </button>
+    </div>
+  );
+}
+
 // ── MAIN ────────────────────────────────────────────────────────────────────
 export default function MarketAdmin() {
+  const [authenticated, setAuthenticated] = useState(() => {
+    if (typeof window !== "undefined") return sessionStorage.getItem("adminAuth") === "true";
+    return false;
+  });
   const [assetTab, setAssetTab] = useState("stock");
   const [stockMarket, setStockMarket] = useState("us"); // 주식 탭용 us/kr
   const market = assetTab === "stock" ? stockMarket : assetTab; // 실제 market 키
@@ -233,6 +293,8 @@ export default function MarketAdmin() {
     }
   };
 
+  if (!authenticated) return <PasswordScreen onSuccess={() => setAuthenticated(true)} />;
+
   const assetInfo = ASSET_TABS.find(a => a.key === assetTab);
   const accentColor = assetTab === "stock"
     ? (stockMarket === "us" ? "#4d8aff" : "#ff6b35")
@@ -300,13 +362,22 @@ export default function MarketAdmin() {
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 8 }}>
-            <select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ flex: 1, padding: "10px 12px", borderRadius: 10, fontFamily: "inherit", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#dde1ea", fontSize: 12, outline: "none", cursor: "pointer" }}>
+          <div style={{ marginBottom: 10 }}>
+            <select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, fontFamily: "inherit", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#dde1ea", fontSize: 12, outline: "none", cursor: "pointer" }}>
               {DATE_OPTIONS.map((o) => <option key={o.value} value={o.value} style={{ background: "#1a1c24" }}>{o.label}</option>)}
             </select>
-            <select value={selectedBatch} onChange={(e) => setSelectedBatch(e.target.value)} style={{ flex: 1, padding: "10px 12px", borderRadius: 10, fontFamily: "inherit", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#dde1ea", fontSize: 12, outline: "none", cursor: "pointer" }}>
-              {BATCH_TIMES.map((t) => <option key={t} value={t} style={{ background: "#1a1c24" }}>{t} 배치</option>)}
-            </select>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {BATCH_TIMES.map((t) => (
+              <button key={t} onClick={() => setSelectedBatch(t)} style={{
+                flex: 1, padding: "9px 0", borderRadius: 10, border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontSize: 11.5, fontWeight: selectedBatch === t ? 700 : 500,
+                transition: "all 0.18s",
+                background: selectedBatch === t ? accentColor : "rgba(255,255,255,0.05)",
+                color: selectedBatch === t ? (accentColor === "#f5c842" ? "#07080c" : "#fff") : "rgba(255,255,255,0.4)",
+                boxShadow: selectedBatch === t ? `0 2px 10px ${accentColor}44` : "none",
+              }}>{t}</button>
+            ))}
           </div>
         </div>
 
@@ -418,7 +489,7 @@ export default function MarketAdmin() {
         {/* STEP 2.5 */}
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1 }}>STEP 2.5 · 분석가 리포트 <span style={{ color: "rgba(255,255,255,0.18)" }}>(선택)</span></div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1 }}>STEP 3 · 분석가 리포트 <span style={{ color: "rgba(255,255,255,0.18)" }}>(선택)</span></div>
             {analystNotes && <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.2)" }}>{analystNotes.length}자</div>}
           </div>
           <textarea
@@ -455,10 +526,11 @@ export default function MarketAdmin() {
 
         {/* STEP 3 */}
         <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1, marginBottom: 12 }}>STEP 3 · AI 분석</div>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1, marginBottom: 12 }}>STEP 4 · AI 분석</div>
           {(() => {
             const isStock = assetTab === "stock";
-            const disabled = analyzing;
+            const hasContent = isStock ? images.length > 0 : (textContent.trim().length > 0 || analystNotes.trim().length > 0);
+            const disabled = analyzing || !hasContent;
             const urlCount = !isStock ? (textContent.match(/https?:\/\/[^\s]+/g) || []).length : 0;
             return (
               <button onClick={handleAnalyze} disabled={disabled} style={{
@@ -467,6 +539,7 @@ export default function MarketAdmin() {
                 background: disabled ? "rgba(255,255,255,0.06)" : "#00e5a0",
                 color: disabled ? "rgba(255,255,255,0.2)" : "#07080c",
                 cursor: disabled ? "not-allowed" : "pointer",
+                opacity: (!analyzing && !hasContent) ? 0.4 : 1,
               }}>
                 {analyzing
                   ? <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -494,10 +567,21 @@ export default function MarketAdmin() {
             <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "24px 0" }} />
             <ResultPreview result={result} market={market} />
             <div style={{ marginTop: 24 }}>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1, marginBottom: 12 }}>STEP 4 · 서비스 반영</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: 1, marginBottom: 12 }}>STEP 5 · 서비스 반영</div>
               {published ? (
-                <div style={{ padding: "14px 0", borderRadius: 12, background: "rgba(0,229,160,0.08)", border: "1px solid rgba(0,229,160,0.25)", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#00e5a0" }}>
-                  ✓ 발행 완료
+                <div>
+                  <div style={{ padding: "14px 0", borderRadius: 12, background: "rgba(0,229,160,0.08)", border: "1px solid rgba(0,229,160,0.25)", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#00e5a0", marginBottom: 10 }}>
+                    ✅ 분석 완료!
+                  </div>
+                  <a href="/" style={{ display: "block", textDecoration: "none" }}>
+                    <div style={{
+                      padding: "13px 0", borderRadius: 12, border: "1px solid rgba(0,229,160,0.35)",
+                      textAlign: "center", fontSize: 13, fontWeight: 700, color: "#00e5a0",
+                      background: "rgba(0,229,160,0.06)", cursor: "pointer",
+                    }}>
+                      메인에서 확인하기 →
+                    </div>
+                  </a>
                 </div>
               ) : (
                 <button onClick={handlePublish} disabled={publishing} style={{

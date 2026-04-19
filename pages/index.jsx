@@ -32,28 +32,8 @@ const AdBanner = () => {
     }
   }, [visible]);
 
-  return (
-    <div style={{
-      position: "fixed", bottom: 0, left: "50%",
-      transform: `translateX(-50%) translateY(${visible ? "0" : "100%"})`,
-      width: "100%", maxWidth: 480, zIndex: 60,
-      background: "rgba(7,8,12,0.97)", backdropFilter: "blur(12px)",
-      borderTop: "1px solid rgba(255,255,255,0.07)",
-      padding: "8px 16px 14px",
-      transition: "transform 0.3s cubic-bezier(.32,1.2,.5,1)",
-      pointerEvents: visible ? "auto" : "none",
-    }}>
-      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", textAlign: "center", marginBottom: 4, letterSpacing: 1 }}>AD</div>
-      <ins
-        className="adsbygoogle"
-        style={{ display: "block", minHeight: 60 }}
-        data-ad-client={ADSENSE_CLIENT}
-        data-ad-slot={ADSENSE_SLOT}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
-      />
-    </div>
-  );
+  // AdSense 심사 통과 후 활성화 예정 — 현재 숨김 처리
+  return null;
 };
 
 const normalizeData = (json) => ({
@@ -450,7 +430,7 @@ const ASSET_TABS = [
   { key: "stock",  label: "주식" },
   { key: "realty", label: "부동산" },
   { key: "crypto", label: "가상자산" },
-  { key: "frac",   label: "조각투자" },
+  { key: "frac",   label: "실물자산" },
 ];
 
 export default function MarketDaily() {
@@ -650,7 +630,7 @@ export default function MarketDaily() {
 
         {/* Tabs */}
         <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16 }}>
-          {[{ key: "news", label: "이슈" }, { key: "picks", label: "종목픽" }, { key: "sectors", label: "섹터" }].map((t) => (
+          {[{ key: "news", label: "이슈" }, { key: "picks", label: "추천 종목" }, { key: "sectors", label: "섹터" }].map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               flex: 1, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
               fontSize: 12.5, fontWeight: tab === t.key ? 600 : 400, padding: "10px 4px",
@@ -711,6 +691,21 @@ export default function MarketDaily() {
             return (
               <div style={{ textAlign: "center", padding: "60px 20px" }}>
                 <div style={{ fontSize: 12, color: "#ff4d6d" }}>{fetchError}</div>
+              </div>
+            );
+          }
+
+          // 비주식 탭: 준비 중 안내
+          if (assetTab !== "stock") {
+            return (
+              <div style={{ textAlign: "center", padding: "80px 24px" }}>
+                <div style={{ fontSize: 36, marginBottom: 18 }}>🙏</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.55)", marginBottom: 10, letterSpacing: -0.3 }}>
+                  준비 중입니다
+                </div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", lineHeight: 1.9 }}>
+                  곧 업데이트될 예정이에요 🙏
+                </div>
               </div>
             );
           }
