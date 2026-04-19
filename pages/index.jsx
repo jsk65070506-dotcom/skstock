@@ -1,6 +1,60 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Head from "next/head";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+
+const ADSENSE_CLIENT = "ca-pub-8044640881453603";
+const ADSENSE_SLOT = "0000000000"; // 심사 통과 후 교체
+
+const AdBanner = () => {
+  const [visible, setVisible] = useState(false);
+  const lastScrollY = useRef(0);
+  const adLoaded = useRef(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      const scrollingDown = currentY > lastScrollY.current;
+      const pastThreshold = currentY > 80;
+      setVisible(scrollingDown && pastThreshold);
+      lastScrollY.current = currentY;
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!visible || adLoaded.current) return;
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+      adLoaded.current = true;
+    } catch (e) {
+      console.warn("AdSense push failed:", e);
+    }
+  }, [visible]);
+
+  return (
+    <div style={{
+      position: "fixed", bottom: 0, left: "50%",
+      transform: `translateX(-50%) translateY(${visible ? "0" : "100%"})`,
+      width: "100%", maxWidth: 480, zIndex: 60,
+      background: "rgba(7,8,12,0.97)", backdropFilter: "blur(12px)",
+      borderTop: "1px solid rgba(255,255,255,0.07)",
+      padding: "8px 16px 14px",
+      transition: "transform 0.3s cubic-bezier(.32,1.2,.5,1)",
+      pointerEvents: visible ? "auto" : "none",
+    }}>
+      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", textAlign: "center", marginBottom: 4, letterSpacing: 1 }}>AD</div>
+      <ins
+        className="adsbygoogle"
+        style={{ display: "block", minHeight: 60 }}
+        data-ad-client={ADSENSE_CLIENT}
+        data-ad-slot={ADSENSE_SLOT}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  );
+};
 
 const normalizeData = (json) => ({
   sentiment:      json.sentiment,
@@ -919,6 +973,7 @@ export default function MarketDaily() {
 
       {/* IndexDetailSheet: 실시간 데이터 연동 전까지 비활성화 */}
     </div>
+    <AdBanner />
     </>
   );
 }
