@@ -13,10 +13,13 @@ const normalizeData = (json) => ({
 });
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
-const sentimentColor = (s) => s === "bullish" ? "#00e5a0" : "#ff4d6d";
+// 한국 기준: 상승 = 빨강, 하락 = 파랑
+const BULL = "#ff3b3b";
+const BEAR = "#4d8aff";
+const sentimentColor = (s) => s === "bullish" ? BULL : BEAR;
 const actionStyle = (a) => {
-  if (a === "BUY")  return { bg: "rgba(0,229,160,0.15)",  color: "#00e5a0", border: "1px solid rgba(0,229,160,0.4)" };
-  if (a === "SELL") return { bg: "rgba(255,77,109,0.15)", color: "#ff4d6d", border: "1px solid rgba(255,77,109,0.4)" };
+  if (a === "BUY")  return { bg: "rgba(255,59,59,0.15)",  color: BULL, border: `1px solid rgba(255,59,59,0.4)` };
+  if (a === "SELL") return { bg: "rgba(77,138,255,0.15)", color: BEAR, border: `1px solid rgba(77,138,255,0.4)` };
   return               { bg: "rgba(245,200,66,0.12)",   color: "#f5c842",  border: "1px solid rgba(245,200,66,0.35)" };
 };
 
@@ -25,7 +28,7 @@ const ScoreBar = ({ score }) => (
     <div style={{ flex: 1, height: 3, background: "rgba(255,255,255,0.07)", borderRadius: 2, overflow: "hidden" }}>
       <div style={{
         width: `${score}%`, height: "100%", borderRadius: 2,
-        background: score > 70 ? "#00e5a0" : score > 50 ? "#f5c842" : "#ff4d6d",
+        background: score > 70 ? BULL : score > 50 ? "#f5c842" : BEAR,
       }} />
     </div>
     <span style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", width: 26, textAlign: "right" }}>{score}</span>
@@ -74,7 +77,7 @@ const IndexDetailSheet = ({ idx, onClose, accentColor }) => {
   const change = last - first;
   const changePct = ((change / first) * 100).toFixed(2);
   const isUp = change >= 0;
-  const color = isUp ? "#00e5a0" : "#ff4d6d";
+  const color = isUp ? BULL : BEAR;
 
   return (
     <>
@@ -445,9 +448,9 @@ export default function MarketDaily() {
             <span style={{
               fontSize: 9, fontWeight: 700, letterSpacing: 1,
               padding: "2px 7px", borderRadius: 4,
-              background: "rgba(0,229,160,0.12)",
-              color: "#00e5a0",
-              border: "1px solid rgba(0,229,160,0.3)",
+              background: "rgba(255,255,255,0.08)",
+              color: "rgba(255,255,255,0.55)",
+              border: "1px solid rgba(255,255,255,0.2)",
               lineHeight: 1.4,
             }}>BETA</span>
           </div>
@@ -497,9 +500,9 @@ export default function MarketDaily() {
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
           <span style={{
             fontSize: 10, padding: "3px 10px", borderRadius: 20, fontWeight: 600, flexShrink: 0,
-            background: data.sentiment === "bullish" ? "rgba(0,229,160,0.12)" : "rgba(255,77,109,0.12)",
-            color: data.sentiment === "bullish" ? "#00e5a0" : "#ff4d6d",
-            border: `1px solid ${data.sentiment === "bullish" ? "rgba(0,229,160,0.3)" : "rgba(255,77,109,0.3)"}`,
+            background: data.sentiment === "bullish" ? "rgba(255,59,59,0.12)" : "rgba(77,138,255,0.12)",
+            color: data.sentiment === "bullish" ? BULL : BEAR,
+            border: `1px solid ${data.sentiment === "bullish" ? "rgba(255,59,59,0.3)" : "rgba(77,138,255,0.3)"}`,
           }}>
             {data.sentiment === "bullish" ? "▲ 강세" : "▼ 약세"}
           </span>
@@ -526,7 +529,7 @@ export default function MarketDaily() {
               }}>
                 <div>
                   <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.33)", marginBottom: 3 }}>{idx.name}</div>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: idx.up ? "#00e5a0" : "#ff4d6d" }}>{idx.value}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: idx.up ? BULL : BEAR }}>{idx.value}</div>
                   {fgLabel && (
                     <div style={{ fontSize: 9, fontWeight: 600, color: fgLabel.color, marginTop: 3 }}>{fgLabel.text}</div>
                   )}
@@ -589,32 +592,55 @@ export default function MarketDaily() {
         )}
 
         {/* 데이터 없음 / 에러 */}
-        {!loading && (fetchError || !data) && (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
-            <div style={{ marginBottom: 12, fontSize: 28 }}>☕</div>
-            {fetchError === "데이터 없음" || !data ? (
-              <>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.45)", marginBottom: 8 }}>
-                  아직 오늘 브리핑이 없어요
+        {!loading && (fetchError || !data) && (() => {
+          const isNoData = fetchError === "데이터 없음" || !data;
+          const dow = new Date(selectedDate + "T12:00:00").getDay(); // 0=Sun, 6=Sat
+          const isWeekend = dow === 0 || dow === 6;
+
+          if (!isNoData) {
+            return (
+              <div style={{ textAlign: "center", padding: "60px 20px" }}>
+                <div style={{ fontSize: 12, color: "#ff4d6d" }}>{fetchError}</div>
+              </div>
+            );
+          }
+
+          if (isWeekend) {
+            return (
+              <div style={{ textAlign: "center", padding: "72px 24px" }}>
+                <div style={{ fontSize: 40, marginBottom: 18 }}>📵</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 10, letterSpacing: -0.3 }}>
+                  오늘은 마켓이 쉬는 날이에요
                 </div>
-                <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.25)", lineHeight: 1.7 }}>
-                  보통 장 시작 전 오전 8시 30분,<br />
-                  장 마감 후 오후 4시에 발행돼요
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", lineHeight: 1.9 }}>
+                  주말엔 포지션도 내려놓고 쉬어가세요<br />
+                  꾸기는 월요일 아침에 깨어있을게요 ☀️
                 </div>
-                <div className="tap" onClick={() => fetchData(true)} style={{
-                  marginTop: 20, display: "inline-block",
-                  fontSize: 11, padding: "7px 18px", borderRadius: 20,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "rgba(255,255,255,0.4)", cursor: "pointer",
-                }}>
-                  {refreshing ? "확인 중..." : "↻ 다시 확인"}
-                </div>
-              </>
-            ) : (
-              <div style={{ fontSize: 12, color: "#ff4d6d" }}>{fetchError}</div>
-            )}
-          </div>
-        )}
+              </div>
+            );
+          }
+
+          return (
+            <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
+              <div style={{ marginBottom: 12, fontSize: 28 }}>☕</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.45)", marginBottom: 8 }}>
+                아직 오늘 브리핑이 없어요
+              </div>
+              <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.25)", lineHeight: 1.7 }}>
+                보통 장 시작 전 오전 8시 30분,<br />
+                장 마감 후 오후 4시에 발행돼요
+              </div>
+              <div className="tap" onClick={() => fetchData(true)} style={{
+                marginTop: 20, display: "inline-block",
+                fontSize: 11, padding: "7px 18px", borderRadius: 20,
+                border: "1px solid rgba(255,255,255,0.12)",
+                color: "rgba(255,255,255,0.4)", cursor: "pointer",
+              }}>
+                {refreshing ? "확인 중..." : "↻ 다시 확인"}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 실제 콘텐츠 */}
         {!loading && data && (<>
@@ -674,9 +700,9 @@ export default function MarketDaily() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <span style={{
                       fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 500,
-                      background: `rgba(${item.sentiment === "bullish" ? "0,229,160" : "255,77,109"},0.1)`,
+                      background: `rgba(${item.sentiment === "bullish" ? "255,59,59" : "77,138,255"},0.1)`,
                       color: sentimentColor(item.sentiment),
-                      border: `1px solid rgba(${item.sentiment === "bullish" ? "0,229,160" : "255,77,109"},0.25)`,
+                      border: `1px solid rgba(${item.sentiment === "bullish" ? "255,59,59" : "77,138,255"},0.25)`,
                     }}>
                       {item.sentiment === "bullish" ? "▲ 강세" : "▼ 약세"}
                     </span>
@@ -751,14 +777,14 @@ export default function MarketDaily() {
                     <span style={{ fontSize: 13, fontWeight: 500 }}>{sec.name}</span>
                     {sec.note && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginLeft: 7 }}>{sec.note}</span>}
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: sec.trend.startsWith("▲") ? "#00e5a0" : "#ff4d6d" }}>{sec.trend}</span>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: sec.trend.startsWith("▲") ? BULL : BEAR }}>{sec.trend}</span>
                 </div>
                 <ScoreBar score={sec.score} />
               </div>
             ))}
             <div style={{ marginTop: 18, borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", padding: "13px 15px" }}>
               <div style={{ fontSize: 10, color: "rgba(255,255,255,0.23)", marginBottom: 10, letterSpacing: 1 }}>SCORE 가이드</div>
-              {[["70–100", "#00e5a0", "강세 진입 구간"], ["50–69", "#f5c842", "중립 / 관망"], ["0–49", "#ff4d6d", "약세 / 회피"]].map(([r, c, l]) => (
+              {[["70–100", BULL, "강세 진입 구간"], ["50–69", "#f5c842", "중립 / 관망"], ["0–49", BEAR, "약세 / 회피"]].map(([r, c, l]) => (
                 <div key={r} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: c, flexShrink: 0 }} />
                   <span style={{ fontSize: 11, color: c, width: 56 }}>{r}</span>
