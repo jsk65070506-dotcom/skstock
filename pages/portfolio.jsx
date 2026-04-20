@@ -204,10 +204,8 @@ const AddAssetForm = ({ type, onCancel, onSave, totalTargetRatio }) => {
     ratioMsg = { text: `현재 설정: ${totalTargetRatio}% / 남은 비율: ${100 - totalTargetRatio}%`, color: "rgba(255,255,255,0.5)" };
   }
 
-  // 주식: 이름+목표비율만 있으면 저장 가능 (현재가 조회 실패해도 진행)
-  // 현금/기타: 금액 필수
-  const canSave = name.trim() && targetRatio && !priceLoading &&
-    (needsSearch ? true : amount && Number(amount) > 0);
+  // 모든 유형: 이름 + 금액 > 0 + 목표비율 필수 (현재가 실패 시 직접 입력 유도)
+  const canSave = name.trim() && targetRatio && !priceLoading && Number(amount) > 0;
 
   const handleSave = () => {
     if (!canSave) return;
@@ -288,13 +286,20 @@ const AddAssetForm = ({ type, onCancel, onSave, totalTargetRatio }) => {
       {/* 평가금액 */}
       <div style={{ marginBottom: 12 }}>
         <label style={labelStyle}>
-          {needsSearch ? "평가금액 (자동 계산)" : "금액"}
-          {needsSearch && !amountAuto && <span style={{ color: "rgba(255,255,255,0.3)", marginLeft: 6 }}>· 직접 입력 가능</span>}
+          {needsSearch ? "평가금액" : "금액"}
+          {needsSearch && !amountAuto && (
+            <span style={{ color: "#C7532C", marginLeft: 6, fontWeight: 600 }}>· 직접 입력 필수</span>
+          )}
         </label>
         <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
           readOnly={!!amountAuto}
-          placeholder={needsSearch ? "현재가 × 수량" : "보유 금액"}
-          style={amountStyle} />
+          placeholder={needsSearch && !amountAuto ? "금액 직접 입력 (원)" : needsSearch ? "현재가 × 수량" : "보유 금액"}
+          style={{
+            ...amountStyle,
+            border: needsSearch && !amountAuto && !amount
+              ? "1px solid rgba(199,83,44,0.5)"
+              : amountStyle.border,
+          }} />
       </div>
 
       {/* 평균 매입가 (주식) */}
@@ -477,17 +482,15 @@ export default function Portfolio() {
             display: "inline-flex", alignItems: "center", gap: 4,
           }}>← 시황</div>
 
-          <div style={{ display: "flex", alignItems: "baseline", gap: 2, marginBottom: 4 }}>
-            <span style={{ fontSize: 12, color: "#34D399", fontWeight: 500 }}>+</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             <span style={{
               fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic",
               fontSize: 22, lineHeight: 1, color: "#34D399", fontWeight: 500,
-            }}>α</span>
+            }}>+α</span>
             <span style={{
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: 9, color: "rgba(255,255,255,0.4)",
               letterSpacing: "0.18em", textTransform: "uppercase",
-              marginLeft: 8, alignSelf: "center",
             }}>Portfolio</span>
           </div>
           <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }}>포트폴리오 진단</div>
@@ -561,7 +564,7 @@ export default function Portfolio() {
               <div style={{
                 fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic",
                 fontSize: 64, lineHeight: 1, color: "#34D399", marginBottom: 20,
-              }}>α</div>
+              }}>+α</div>
               <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>보유 자산을 추가해보세요</div>
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.42)", lineHeight: 1.75, marginBottom: 24 }}>
                 자산명, 현재 금액, 목표 비율을 입력하면<br />
