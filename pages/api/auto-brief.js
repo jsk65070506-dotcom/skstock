@@ -125,7 +125,7 @@ async function processMarket(market, date) {
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 1024,
+      max_tokens: 1500,
       messages: [
         {
           role: "user",
