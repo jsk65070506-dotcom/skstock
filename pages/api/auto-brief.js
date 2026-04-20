@@ -65,14 +65,13 @@ const ALL_MARKETS = [
       "https://land.naver.com/news/landNews.naver",
     ],
   },
-  {
-    key: "frac",
-    batch: "b",
-    label: "조각투자 시장(부동산·음악·미술·명품 등 실물자산 조각투자)",
-    sources: [
-      "https://www.tokenpost.kr/news",
-    ],
-  },
+  // frac: Vercel 60s 제한으로 batch=b에서 제외 (향후 Pro 플랜 전환 시 추가)
+  // {
+  //   key: "frac",
+  //   batch: "b",
+  //   label: "조각투자 시장(부동산·음악·미술·명품 등 실물자산 조각투자)",
+  //   sources: ["https://www.tokenpost.kr/news"],
+  // },
 ];
 
 // ── URL → 텍스트 (Jina AI Reader) ───────────────────────────────
