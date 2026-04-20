@@ -428,8 +428,8 @@ const DATE_OPTIONS = (() => {
 
 const ASSET_TABS = [
   { key: "stock",  label: "주식" },
-  { key: "realty", label: "부동산" },
   { key: "crypto", label: "가상자산" },
+  { key: "realty", label: "부동산" },
   { key: "frac",   label: "실물자산" },
 ];
 
@@ -576,19 +576,25 @@ export default function MarketDaily() {
 
         <>
         {/* Sentiment + one-liner */}
-        {data && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <span style={{
-            fontSize: 10, padding: "3px 10px", borderRadius: 20, fontWeight: 600, flexShrink: 0,
-            background: data.sentiment === "bullish" ? "rgba(255,59,59,0.12)" : "rgba(77,138,255,0.12)",
-            color: data.sentiment === "bullish" ? BULL : BEAR,
-            border: `1px solid ${data.sentiment === "bullish" ? "rgba(255,59,59,0.3)" : "rgba(77,138,255,0.3)"}`,
-          }}>
-            {data.sentiment === "bullish" ? "▲ 강세" : "▼ 약세"}
-          </span>
-          <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", lineHeight: 1.45 }}>{data.oneLineSummary}</span>
-        </div>
-        )}
+        {data && (() => {
+          const noNewsKeywords = ["뉴스 부재", "뉴스 없음", "뉴스 무재", "데이터 부재", "데이터 없음", "데이터 부족", "뉴스 데이터"];
+          const hideOneliner = noNewsKeywords.some(k => data.oneLineSummary?.includes(k));
+          return (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{
+              fontSize: 10, padding: "3px 10px", borderRadius: 20, fontWeight: 600, flexShrink: 0,
+              background: data.sentiment === "bullish" ? "rgba(255,59,59,0.12)" : "rgba(77,138,255,0.12)",
+              color: data.sentiment === "bullish" ? BULL : BEAR,
+              border: `1px solid ${data.sentiment === "bullish" ? "rgba(255,59,59,0.3)" : "rgba(77,138,255,0.3)"}`,
+            }}>
+              {data.sentiment === "bullish" ? "▲ 강세" : "▼ 약세"}
+            </span>
+            {!hideOneliner && (
+              <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", lineHeight: 1.45 }}>{data.oneLineSummary}</span>
+            )}
+          </div>
+          );
+        })()}
 
         {/* Indices */}
         <div style={{ display: "flex", gap: 8, overflowX: "auto", marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16, paddingBottom: 12 }}>
