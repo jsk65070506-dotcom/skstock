@@ -5,8 +5,12 @@
   },
   "crons": [
     {
-      "path": "/api/auto-brief",
+      "path": "/api/auto-brief?batch=a",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/auto-brief?batch=b",
+      "schedule": "10 0 * * *"
     }
   ]
 }

@@ -29,9 +29,12 @@ const RULES = `규칙:
 - 뉴스 데이터가 부족하더라도 최대한 일반적인 시황을 반영하여 결과 생성`;
 
 // ── 시장별 뉴스 소스 ────────────────────────────────────────────
-const MARKETS = [
+// batch=a → us, kr, crypto  (cron 00:00 UTC)
+// batch=b → realty, frac    (cron 00:10 UTC)
+const ALL_MARKETS = [
   {
     key: "us",
+    batch: "a",
     label: "미국 주식시장",
     sources: [
       "https://finance.naver.com/news/news_list.naver?mode=LSS2D&section_id=101&section_id2=255",
@@ -40,6 +43,7 @@ const MARKETS = [
   },
   {
     key: "kr",
+    batch: "a",
     label: "한국 주식시장",
     sources: [
       "https://finance.naver.com/news/news_list.naver?mode=LSS2D&section_id=101&section_id2=258",
@@ -48,6 +52,7 @@ const MARKETS = [
   },
   {
     key: "crypto",
+    batch: "a",
     label: "가상자산(암호화폐) 시장",
     sources: [
       "https://kr.cointelegraph.com/news",
@@ -56,6 +61,7 @@ const MARKETS = [
   },
   {
     key: "realty",
+    batch: "b",
     label: "한국 부동산 시장",
     sources: [
       "https://land.naver.com/news/landNews.naver",
@@ -64,6 +70,7 @@ const MARKETS = [
   },
   {
     key: "frac",
+    batch: "b",
     label: "조각투자 시장(부동산·음악·미술·명품 등 실물자산 조각투자)",
     sources: [
       "https://www.hankyung.com/economy",
@@ -180,7 +187,6 @@ ${JSON_SCHEMA}`,
 
 // ── 메인 핸들러 ─────────────────────────────────────────────────
 export default async function handler(req, res) {
-  // Vercel Cron은 GET으로 호출, 수동 테스트는 POST 허용
   if (req.method !== "GET" && req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -198,26 +204,41 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "KKUGI_ANTHROPIC_API_KEY 미설정" });
   }
 
+  // batch 파라미터로 실행할 시장 선택 (기본: a)
+  // batch=a → us, kr, crypto  (cron 00:00 UTC = 09:00 KST)
+  // batch=b → realty, frac    (cron 00:10 UTC = 09:10 KST)
+  // batch=all → 전체 (수동 테스트용)
+  const batch = req.query.batch || "a";
+  const MARKETS = batch === "all"
+    ? ALL_MARKETS
+    : ALL_MARKETS.filter((m) => m.batch === batch);
+
+  if (MARKETS.length === 0) {
+    return res.status(400).json({ error: `알 수 없는 batch: ${batch}` });
+  }
+
   const date = getTodayKST();
-  console.log(`[auto-brief] 시작: ${date}`);
+  console.log(`[auto-brief] 시작: ${date} batch=${batch} markets=${MARKETS.map(m=>m.key).join(",")}`);
 
-  // 모든 시장 병렬 처리 (실패해도 나머지 계속 진행)
-  const results = await Promise.allSettled(
-    MARKETS.map((m) => processMarket(m, date))
-  );
+  // 순차 처리 — 60초 제한 내에 각 시장을 하나씩 완료·저장
+  const summary = [];
+  for (const m of MARKETS) {
+    try {
+      const result = await processMarket(m, date);
+      summary.push({ market: m.key, status: "ok", sourcesUsed: result.sourcesUsed });
+      console.log(`[auto-brief] ✓ ${m.key} 저장 완료`);
+    } catch (err) {
+      summary.push({ market: m.key, status: "error", error: String(err?.message || err) });
+      console.error(`[auto-brief] ✗ ${m.key} 실패:`, err?.message);
+    }
+  }
 
-  const summary = results.map((r, i) => ({
-    market: MARKETS[i].key,
-    status: r.status === "fulfilled" ? "ok" : "error",
-    sourcesUsed: r.status === "fulfilled" ? r.value.sourcesUsed : 0,
-    error: r.status === "rejected" ? String(r.reason?.message || r.reason) : null,
-  }));
-
-  const successCount = results.filter((r) => r.status === "fulfilled").length;
-  console.log(`[auto-brief] 완료: ${date} — ${successCount}/${MARKETS.length} 성공`, JSON.stringify(summary));
+  const successCount = summary.filter((r) => r.status === "ok").length;
+  console.log(`[auto-brief] 완료: ${date} batch=${batch} — ${successCount}/${MARKETS.length} 성공`);
 
   return res.status(200).json({
     date,
+    batch,
     successCount,
     totalCount: MARKETS.length,
     results: summary,
