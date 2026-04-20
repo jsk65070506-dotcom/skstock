@@ -26,7 +26,8 @@ const RULES = `규칙:
 - issues 최대 3개 (중요도 순)
 - picks BUY/SELL/WATCH 중 하나, 최대 3개
 - sectors 최대 5개
-- 뉴스 부족시 일반 시황으로 대체
+- 뉴스 데이터가 적더라도 일반 시황 지식으로 보완하여 반드시 완성된 내용 작성
+- oneLineSummary와 summary에 "뉴스 부재", "뉴스 부족", "데이터 없음" 등 수집 실패 관련 메타 표현 절대 금지. 시황 내용만 작성
 - 반드시 완성된 JSON만 출력`;
 
 // ── 시장별 뉴스 소스 ────────────────────────────────────────────
@@ -39,6 +40,7 @@ const ALL_MARKETS = [
     label: "미국 주식시장",
     sources: [
       "https://finance.naver.com/news/news_list.naver?mode=LSS2D&section_id=101&section_id2=255",
+      "https://www.investing.com/news/stock-market-news",
     ],
   },
   {
@@ -47,6 +49,7 @@ const ALL_MARKETS = [
     label: "한국 주식시장",
     sources: [
       "https://finance.naver.com/news/news_list.naver?mode=LSS2D&section_id=101&section_id2=258",
+      "https://www.hankyung.com/finance",
     ],
   },
   {
@@ -55,6 +58,7 @@ const ALL_MARKETS = [
     label: "가상자산(암호화폐) 시장",
     sources: [
       "https://kr.cointelegraph.com/news",
+      "https://www.coindeskkorea.com/news/",
     ],
   },
   {
@@ -63,6 +67,7 @@ const ALL_MARKETS = [
     label: "한국 부동산 시장",
     sources: [
       "https://land.naver.com/news/landNews.naver",
+      "https://www.hankyung.com/realestate",
     ],
   },
   // frac: Vercel 60s 제한으로 batch=b에서 제외 (향후 Pro 플랜 전환 시 추가)

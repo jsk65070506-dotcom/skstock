@@ -577,7 +577,7 @@ export default function MarketDaily() {
         <>
         {/* Sentiment + one-liner */}
         {data && (() => {
-          const noNewsKeywords = ["뉴스 부재", "뉴스 없음", "뉴스 무재", "데이터 부재", "데이터 없음", "데이터 부족", "뉴스 데이터"];
+          const noNewsKeywords = ["뉴스 부재", "뉴스 없음", "뉴스 무재", "뉴스 부족", "데이터 부재", "데이터 없음", "데이터 부족", "뉴스 데이터", "수집 실패", "정보 부족", "자료 부족"];
           const hideOneliner = noNewsKeywords.some(k => data.oneLineSummary?.includes(k));
           return (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
