@@ -30,68 +30,56 @@ const RULES = `규칙:
 - oneLineSummary와 summary에 "뉴스 부재", "뉴스 부족", "데이터 없음" 등 수집 실패 관련 메타 표현 절대 금지. 시황 내용만 작성
 - 반드시 완성된 JSON만 출력`;
 
-// ── 시장별 뉴스 소스 ────────────────────────────────────────────
+// ── 시장별 뉴스 소스 (Google News RSS — 안정적 실시간 헤드라인) ──
 // batch=a → us, kr          (cron 00:00 UTC = 09:00 KST)
-// batch=b → crypto, realty, frac (cron 00:10 UTC = 09:10 KST)
+// batch=b → crypto, realty  (cron 00:10 UTC = 09:10 KST)
 const ALL_MARKETS = [
   {
     key: "us",
     batch: "a",
     label: "미국 주식시장",
-    sources: [
-      "https://finance.naver.com/news/news_list.naver?mode=LSS2D&section_id=101&section_id2=255",
-      "https://www.investing.com/news/stock-market-news",
-    ],
+    queries: ["나스닥 S&P500 미국 증시", "미국 주식 연준 금리"],
   },
   {
     key: "kr",
     batch: "a",
     label: "한국 주식시장",
-    sources: [
-      "https://finance.naver.com/news/news_list.naver?mode=LSS2D&section_id=101&section_id2=258",
-      "https://www.hankyung.com/finance",
-    ],
+    queries: ["코스피 코스닥 한국 증시", "한국 주식 외국인 반도체"],
   },
   {
     key: "crypto",
     batch: "b",
     label: "가상자산(암호화폐) 시장",
-    sources: [
-      "https://kr.cointelegraph.com/news",
-      "https://www.coindeskkorea.com/news/",
-    ],
+    queries: ["비트코인 이더리움 가상자산", "암호화폐 코인 시세"],
   },
   {
     key: "realty",
     batch: "b",
     label: "한국 부동산 시장",
-    sources: [
-      "https://land.naver.com/news/landNews.naver",
-      "https://www.hankyung.com/realestate",
-    ],
+    queries: ["아파트 부동산 매매 전세", "부동산 정책 금리 대출"],
   },
-  // frac: Vercel 60s 제한으로 batch=b에서 제외 (향후 Pro 플랜 전환 시 추가)
-  // {
-  //   key: "frac",
-  //   batch: "b",
-  //   label: "조각투자 시장(부동산·음악·미술·명품 등 실물자산 조각투자)",
-  //   sources: ["https://www.tokenpost.kr/news"],
-  // },
 ];
 
-// ── URL → 텍스트 (Jina AI Reader) ───────────────────────────────
-async function fetchUrlText(url) {
+// ── Google News RSS → 헤드라인 텍스트 ───────────────────────────
+async function fetchGoogleNewsRSS(query) {
   try {
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 5000);
-    const r = await fetch(`https://r.jina.ai/${url}`, {
-      signal: ctrl.signal,
-      headers: { Accept: "text/plain" },
-    });
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(url, { signal: ctrl.signal });
     clearTimeout(timer);
     if (!r.ok) return null;
-    const text = (await r.text()).slice(0, 2000);
-    return `[출처: ${url}]\n${text}`;
+    const xml = await r.text();
+    // RSS <item> 파싱: title + source
+    const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
+    const headlines = items.slice(0, 8).map((item) => {
+      const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]
+        || item.match(/<title>(.*?)<\/title>/)?.[1] || "";
+      const src = item.match(/<source[^>]*>(.*?)<\/source>/)?.[1] || "";
+      return title ? `- ${title}${src ? ` (${src})` : ""}` : null;
+    }).filter(Boolean);
+    if (!headlines.length) return null;
+    return `[구글뉴스: ${query}]\n${headlines.join("\n")}`;
   } catch {
     return null;
   }
@@ -105,8 +93,8 @@ function getTodayKST() {
 
 // ── 단일 시장 처리 ───────────────────────────────────────────────
 async function processMarket(market, date) {
-  // 1. 뉴스 병렬 수집
-  const fetched = await Promise.allSettled(market.sources.map(fetchUrlText));
+  // 1. Google News RSS 병렬 수집
+  const fetched = await Promise.allSettled(market.queries.map(fetchGoogleNewsRSS));
   const texts = fetched
     .filter((r) => r.status === "fulfilled" && r.value)
     .map((r) => r.value);
@@ -182,7 +170,7 @@ ${JSON_SCHEMA}`,
 
   if (error) throw new Error(`Supabase 저장 실패 (${market.key}): ${error.message}`);
 
-  return { key: market.key, ok: true, sourcesUsed: texts.length };
+  return { key: market.key, ok: true, headlinesUsed: texts.length };
 }
 
 // ── 메인 핸들러 ─────────────────────────────────────────────────
@@ -225,7 +213,7 @@ export default async function handler(req, res) {
   for (const m of MARKETS) {
     try {
       const result = await processMarket(m, date);
-      summary.push({ market: m.key, status: "ok", sourcesUsed: result.sourcesUsed });
+      summary.push({ market: m.key, status: "ok", headlinesUsed: result.headlinesUsed });
       console.log(`[auto-brief] ✓ ${m.key} 저장 완료`);
     } catch (err) {
       summary.push({ market: m.key, status: "error", error: String(err?.message || err) });
