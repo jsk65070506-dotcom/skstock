@@ -83,14 +83,14 @@ const ALL_MARKETS = [
 async function fetchUrlText(url) {
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const timer = setTimeout(() => ctrl.abort(), 5000);
     const r = await fetch(`https://r.jina.ai/${url}`, {
       signal: ctrl.signal,
       headers: { Accept: "text/plain" },
     });
     clearTimeout(timer);
     if (!r.ok) return null;
-    const text = (await r.text()).slice(0, 4000);
+    const text = (await r.text()).slice(0, 2000);
     return `[출처: ${url}]\n${text}`;
   } catch {
     return null;
@@ -125,7 +125,7 @@ async function processMarket(market, date) {
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 2048,
+      max_tokens: 1024,
       messages: [
         {
           role: "user",
