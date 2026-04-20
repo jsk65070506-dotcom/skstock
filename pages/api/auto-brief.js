@@ -10,12 +10,12 @@ import { supabase } from "../../lib/supabase";
 const JSON_SCHEMA = `{
   "sentiment": "bullish" | "bearish",
   "oneLineSummary": "한 줄 요약 (40자 이내)",
-  "summary": "AI 시황 요약 (200자 이내)",
+  "summary": "AI 시황 요약 (100자 이내)",
   "issues": [
-    { "id": 1, "sentiment": "bullish", "sector": "섹터명", "title": "뉴스 제목", "tickers": ["티커"], "body": "상세 내용 (120자 이내)" }
+    { "id": 1, "sentiment": "bullish", "sector": "섹터명", "title": "뉴스 제목", "tickers": ["티커"], "body": "상세 내용 (60자 이내)" }
   ],
   "picks": [
-    { "ticker": "티커", "name": "종목명", "action": "BUY", "reason": "이유 (80자 이내)" }
+    { "ticker": "티커", "name": "종목명", "action": "BUY", "reason": "이유 (50자 이내)" }
   ],
   "sectors": [
     { "name": "섹터명", "score": 75, "trend": "▲ +1.2%", "note": "메모" }
@@ -23,14 +23,15 @@ const JSON_SCHEMA = `{
 }`;
 
 const RULES = `규칙:
-- issues는 가장 많이 보도된 뉴스를 중요도 순으로 최대 5개
-- picks는 BUY/SELL/WATCH 중 하나, 최대 5개 (해당 시장에 맞는 자산/종목으로)
-- sectors는 해당 시장 주요 섹터 기준 최대 8개
-- 뉴스 데이터가 부족하더라도 최대한 일반적인 시황을 반영하여 결과 생성`;
+- issues 최대 3개 (중요도 순)
+- picks BUY/SELL/WATCH 중 하나, 최대 3개
+- sectors 최대 5개
+- 뉴스 부족시 일반 시황으로 대체
+- 반드시 완성된 JSON만 출력`;
 
 // ── 시장별 뉴스 소스 ────────────────────────────────────────────
-// batch=a → us, kr, crypto  (cron 00:00 UTC)
-// batch=b → realty, frac    (cron 00:10 UTC)
+// batch=a → us, kr          (cron 00:00 UTC = 09:00 KST)
+// batch=b → crypto, realty, frac (cron 00:10 UTC = 09:10 KST)
 const ALL_MARKETS = [
   {
     key: "us",
@@ -38,7 +39,6 @@ const ALL_MARKETS = [
     label: "미국 주식시장",
     sources: [
       "https://finance.naver.com/news/news_list.naver?mode=LSS2D&section_id=101&section_id2=255",
-      "https://www.investing.com/news/stock-market-news",
     ],
   },
   {
@@ -47,16 +47,14 @@ const ALL_MARKETS = [
     label: "한국 주식시장",
     sources: [
       "https://finance.naver.com/news/news_list.naver?mode=LSS2D&section_id=101&section_id2=258",
-      "https://www.hankyung.com/finance",
     ],
   },
   {
     key: "crypto",
-    batch: "a",
+    batch: "b",
     label: "가상자산(암호화폐) 시장",
     sources: [
       "https://kr.cointelegraph.com/news",
-      "https://www.coindeskkorea.com/news/",
     ],
   },
   {
@@ -65,7 +63,6 @@ const ALL_MARKETS = [
     label: "한국 부동산 시장",
     sources: [
       "https://land.naver.com/news/landNews.naver",
-      "https://www.hankyung.com/realestate",
     ],
   },
   {
@@ -73,7 +70,6 @@ const ALL_MARKETS = [
     batch: "b",
     label: "조각투자 시장(부동산·음악·미술·명품 등 실물자산 조각투자)",
     sources: [
-      "https://www.hankyung.com/economy",
       "https://www.tokenpost.kr/news",
     ],
   },
@@ -125,7 +121,7 @@ async function processMarket(market, date) {
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 1500,
+      max_tokens: 1200,
       messages: [
         {
           role: "user",
