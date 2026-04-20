@@ -38,29 +38,29 @@ const ALL_MARKETS = [
     key: "us",
     batch: "a",
     label: "미국 주식시장",
-    queries: ["나스닥 S&P500 미국 증시", "미국 주식 연준 금리"],
+    queries: ["나스닥 S&P500 미국 증시", "미국 주식 연준 금리 경제", "Wall Street stock market today"],
   },
   {
     key: "kr",
     batch: "a",
     label: "한국 주식시장",
-    queries: ["코스피 코스닥 한국 증시", "한국 주식 외국인 반도체"],
+    queries: ["코스피 코스닥 한국 증시", "한국 주식 외국인 반도체 삼성", "코스피 급등 급락 시황"],
   },
   {
     key: "crypto",
     batch: "b",
     label: "가상자산(암호화폐) 시장",
-    queries: ["비트코인 이더리움 가상자산", "암호화폐 코인 시세"],
+    queries: ["비트코인 이더리움 가상자산", "암호화폐 코인 시세 급등 급락", "Bitcoin crypto market today"],
   },
   {
     key: "realty",
     batch: "b",
     label: "한국 부동산 시장",
-    queries: ["아파트 부동산 매매 전세", "부동산 정책 금리 대출"],
+    queries: ["아파트 부동산 매매 전세", "부동산 정책 금리 대출 규제", "서울 아파트 집값 시장"],
   },
 ];
 
-// ── Google News RSS → 헤드라인 텍스트 ───────────────────────────
+// ── Google News RSS → 헤드라인 + 요약 텍스트 ────────────────────
 async function fetchGoogleNewsRSS(query) {
   try {
     const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
@@ -70,16 +70,19 @@ async function fetchGoogleNewsRSS(query) {
     clearTimeout(timer);
     if (!r.ok) return null;
     const xml = await r.text();
-    // RSS <item> 파싱: title + source
     const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
-    const headlines = items.slice(0, 8).map((item) => {
+    const headlines = items.slice(0, 15).map((item) => {
       const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]
         || item.match(/<title>(.*?)<\/title>/)?.[1] || "";
+      const desc = item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/)?.[1]
+        || item.match(/<description>(.*?)<\/description>/)?.[1] || "";
       const src = item.match(/<source[^>]*>(.*?)<\/source>/)?.[1] || "";
-      return title ? `- ${title}${src ? ` (${src})` : ""}` : null;
+      // HTML 태그 제거
+      const cleanDesc = desc.replace(/<[^>]+>/g, "").slice(0, 80).trim();
+      return title ? `[${src}] ${title}${cleanDesc ? ` — ${cleanDesc}` : ""}` : null;
     }).filter(Boolean);
     if (!headlines.length) return null;
-    return `[구글뉴스: ${query}]\n${headlines.join("\n")}`;
+    return `[구글뉴스 "${query}" — ${headlines.length}건]\n${headlines.join("\n")}`;
   } catch {
     return null;
   }
