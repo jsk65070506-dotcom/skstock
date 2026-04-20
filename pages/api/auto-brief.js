@@ -60,7 +60,7 @@ const ALL_MARKETS = [
   },
 ];
 
-// ── Google News RSS → 헤드라인 + 요약 텍스트 ────────────────────
+// ── Google News RSS → 헤드라인 목록 + 상위 기사 URL 반환 ────────
 async function fetchGoogleNewsRSS(query) {
   try {
     const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
@@ -71,18 +71,33 @@ async function fetchGoogleNewsRSS(query) {
     if (!r.ok) return null;
     const xml = await r.text();
     const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
-    const headlines = items.slice(0, 15).map((item) => {
+    const parsed = items.slice(0, 15).map((item) => {
       const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]
         || item.match(/<title>(.*?)<\/title>/)?.[1] || "";
-      const desc = item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/)?.[1]
-        || item.match(/<description>(.*?)<\/description>/)?.[1] || "";
+      const link = item.match(/<link>(.*?)<\/link>/)?.[1]
+        || item.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1] || "";
       const src = item.match(/<source[^>]*>(.*?)<\/source>/)?.[1] || "";
-      // HTML 태그 제거
-      const cleanDesc = desc.replace(/<[^>]+>/g, "").slice(0, 80).trim();
-      return title ? `[${src}] ${title}${cleanDesc ? ` — ${cleanDesc}` : ""}` : null;
+      return title ? { title, link, src } : null;
     }).filter(Boolean);
-    if (!headlines.length) return null;
-    return `[구글뉴스 "${query}" — ${headlines.length}건]\n${headlines.join("\n")}`;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+// ── Jina AI Reader로 기사 본문 fetch ────────────────────────────
+async function fetchArticleBody(url) {
+  if (!url || url.includes("news.google.com")) return null;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    const r = await fetch(`https://r.jina.ai/${url}`, {
+      signal: ctrl.signal,
+      headers: { Accept: "text/plain" },
+    });
+    clearTimeout(timer);
+    if (!r.ok) return null;
+    return (await r.text()).slice(0, 1500);
   } catch {
     return null;
   }
@@ -96,15 +111,26 @@ function getTodayKST() {
 
 // ── 단일 시장 처리 ───────────────────────────────────────────────
 async function processMarket(market, date) {
-  // 1. Google News RSS 병렬 수집
-  const fetched = await Promise.allSettled(market.queries.map(fetchGoogleNewsRSS));
-  const texts = fetched
+  // 1단계: Google News RSS 병렬 수집 (헤드라인 목록)
+  const rssResults = await Promise.allSettled(market.queries.map(fetchGoogleNewsRSS));
+  const allItems = rssResults
     .filter((r) => r.status === "fulfilled" && r.value)
-    .map((r) => r.value);
+    .flatMap((r) => r.value);
 
-  const combinedText = texts.length > 0
-    ? texts.join("\n\n---\n\n")
-    : `${market.label} 최신 동향을 분석해주세요. 오늘 날짜: ${date}`;
+  // 헤드라인 텍스트 (전체 목록)
+  const headlineText = allItems.length > 0
+    ? `[수집된 헤드라인 ${allItems.length}건]\n` + allItems.map(i => `[${i.src}] ${i.title}`).join("\n")
+    : "";
+
+  // 2단계: 상위 4개 기사 본문 병렬 fetch (Jina)
+  const topLinks = allItems.slice(0, 4).map(i => i.link).filter(Boolean);
+  const bodies = await Promise.allSettled(topLinks.map(fetchArticleBody));
+  const bodyTexts = bodies
+    .filter((r) => r.status === "fulfilled" && r.value)
+    .map((r, i) => `[기사 ${i + 1} 본문]\n${r.value}`);
+
+  const combinedText = [headlineText, ...bodyTexts].filter(Boolean).join("\n\n===\n\n")
+    || `${market.label} 최신 동향을 분석해주세요. 오늘 날짜: ${date}`;
 
   // 2. Claude AI 분석
   const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
@@ -173,7 +199,7 @@ ${JSON_SCHEMA}`,
 
   if (error) throw new Error(`Supabase 저장 실패 (${market.key}): ${error.message}`);
 
-  return { key: market.key, ok: true, headlinesUsed: texts.length };
+  return { key: market.key, ok: true, headlinesUsed: allItems.length, bodiesFetched: bodyTexts.length };
 }
 
 // ── 메인 핸들러 ─────────────────────────────────────────────────
@@ -216,7 +242,7 @@ export default async function handler(req, res) {
   for (const m of MARKETS) {
     try {
       const result = await processMarket(m, date);
-      summary.push({ market: m.key, status: "ok", headlinesUsed: result.headlinesUsed });
+      summary.push({ market: m.key, status: "ok", headlinesUsed: result.headlinesUsed, bodiesFetched: result.bodiesFetched });
       console.log(`[auto-brief] ✓ ${m.key} 저장 완료`);
     } catch (err) {
       summary.push({ market: m.key, status: "error", error: String(err?.message || err) });
