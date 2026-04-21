@@ -1,5 +1,5 @@
 // pages/admin.jsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Head from "next/head";
 
 // MAX 1000px, JPEG 72% → 장당 약 60~100KB, 30장 = ~2.5MB (Vercel 4.5MB 한도 이내)
@@ -180,10 +180,11 @@ function PasswordScreen({ onSuccess }) {
 
 // ── MAIN ────────────────────────────────────────────────────────────────────
 export default function MarketAdmin() {
-  const [authenticated, setAuthenticated] = useState(() => {
-    if (typeof window !== "undefined") return sessionStorage.getItem("adminAuth") === "true";
-    return false;
-  });
+  // SSR 수화 오류 방지 — sessionStorage는 클라이언트 전용
+  const [authenticated, setAuthenticated] = useState(false);
+  useEffect(() => {
+    if (sessionStorage.getItem("adminAuth") === "true") setAuthenticated(true);
+  }, []);
   const [assetTab, setAssetTab] = useState("stock");
   const [stockMarket, setStockMarket] = useState("us"); // 주식 탭용 us/kr
   const market = assetTab === "stock" ? stockMarket : assetTab; // 실제 market 키
