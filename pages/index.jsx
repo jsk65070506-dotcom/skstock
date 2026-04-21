@@ -870,30 +870,46 @@ export default function MarketDaily() {
         {/* 섹터 탭 */}
         {tab === "sectors" && (
           <div className="fade-up">
-            <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.27)", marginBottom: 16 }}>
-              {market === "us" ? "🇺🇸 미국" : "🇰🇷 한국"} 섹터 모멘텀 스코어 (0–100)
-            </div>
-            {data.sectors.map((sec) => (
-              <div key={sec.name} style={{ marginBottom: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7, alignItems: "baseline" }}>
-                  <div>
-                    <span style={{ fontSize: 13, fontWeight: 500 }}>{sec.name}</span>
-                    {sec.note && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginLeft: 7 }}>{sec.note}</span>}
-                  </div>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: sec.trend.startsWith("▲") ? BULL : BEAR }}>{sec.trend}</span>
-                </div>
-                <ScoreBar score={sec.score} />
+            {/* 헤더 + 범례 */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.45)", letterSpacing: 0.5 }}>섹터 모멘텀</span>
+              <div style={{ display: "flex", gap: 10 }}>
+                {[["#00e5a0", "상승"], ["#f5c842", "보합"], ["#ff4d6d", "하락"]].map(([c, l]) => (
+                  <span key={l} style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ color: c }}>●</span>{l}
+                  </span>
+                ))}
               </div>
-            ))}
-            <div style={{ marginTop: 18, borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", padding: "13px 15px" }}>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.23)", marginBottom: 10, letterSpacing: 1 }}>SCORE 가이드</div>
-              {[["70–100", BULL, "강세 진입 구간"], ["50–69", "#f5c842", "중립 / 관망"], ["0–49", BEAR, "약세 / 회피"]].map(([r, c, l]) => (
-                <div key={r} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: c, flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: c, width: 56 }}>{r}</span>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.38)" }}>{l}</span>
-                </div>
-              ))}
+            </div>
+
+            {/* 섹터 카드 목록 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {data.sectors.map((sec) => {
+                const barColor = sec.score >= 70 ? "#00e5a0" : sec.score >= 50 ? "#f5c842" : "#ff4d6d";
+                const trendUp = sec.trend?.startsWith("▲");
+                const trendDown = sec.trend?.startsWith("▼");
+                const trendColor = trendUp ? "#00e5a0" : trendDown ? "#ff4d6d" : "#f5c842";
+                return (
+                  <div key={sec.name} style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    {/* 섹터명 + 트렌드 + 스코어 */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600 }}>{sec.name}</span>
+                        {sec.trend && <span style={{ fontSize: 10.5, color: trendColor, fontWeight: 500 }}>{sec.trend}</span>}
+                      </div>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: barColor }}>{sec.score}</span>
+                    </div>
+                    {/* 스코어 바 */}
+                    <div style={{ height: 4, background: "rgba(255,255,255,0.07)", borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{ width: `${sec.score}%`, height: "100%", borderRadius: 2, background: barColor }} />
+                    </div>
+                    {/* 노트 */}
+                    {sec.note && (
+                      <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.30)", marginTop: 8 }}>{sec.note}</div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
