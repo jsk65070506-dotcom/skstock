@@ -497,52 +497,43 @@ export default function MarketDaily() {
 
       {/* ── HEADER ── */}
       <div style={{ padding: "16px 16px 0", position: "sticky", top: 0, background: "#07080c", zIndex: 50 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          {/* 타이틀 + BETA 뱃지 */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1 }}>
-              <span style={{ color: "#34d399", fontStyle: "italic" }}>+α</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 0.1, lineHeight: 1 }}>월급만으론 부족한 우리를 위해</span>
-              <span style={{
-                fontSize: 8, fontWeight: 700, letterSpacing: 1,
-                padding: "1px 5px", borderRadius: 3,
-                background: "rgba(255,255,255,0.08)",
-                color: "rgba(255,255,255,0.45)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                lineHeight: 1.5,
-              }}>BETA</span>
-            </div>
-          </div>
-          {/* 날짜 선택 + 업데이트 시각 */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <select
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 7, color: "rgba(255,255,255,0.7)",
-                  fontFamily: "inherit", fontSize: 10.5,
-                  padding: "4px 22px 4px 8px", cursor: "pointer", outline: "none",
-                  appearance: "none", WebkitAppearance: "none",
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: "no-repeat", backgroundPosition: "right 6px center",
-                }}
-              >
-                {DATE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value} style={{ background: "#1a1c24" }}>{opt.label}</option>
-                ))}
-              </select>
-              {data && (
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>
-                  · {data.fetchedAt} 업데이트
-                </span>
-              )}
-            </div>
-          </div>
+        {/* Row 1: 로고 + 태그라인 + BETA — 한 줄 */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5, color: "#00e5a0", fontStyle: "italic", lineHeight: 1, flexShrink: 0 }}>+α</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 0.1, lineHeight: 1 }}>월급만으론 부족한 우리를 위해</span>
+          <span style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: 1,
+            padding: "2px 6px", borderRadius: 4, flexShrink: 0,
+            background: "rgba(255,255,255,0.07)",
+            color: "rgba(255,255,255,0.4)",
+            border: "1px solid rgba(255,255,255,0.15)",
+          }}>BETA</span>
+        </div>
+        {/* Row 2: 날짜 선택 우측 정렬 + 업데이트 시각 아래 */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, marginBottom: 12 }}>
+          <select
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 20, color: "rgba(255,255,255,0.7)",
+              fontFamily: "inherit", fontSize: 12,
+              padding: "6px 26px 6px 14px", cursor: "pointer", outline: "none",
+              appearance: "none", WebkitAppearance: "none",
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+              backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
+            }}
+          >
+            {DATE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value} style={{ background: "#1a1c24" }}>{opt.label}</option>
+            ))}
+          </select>
+          {data && (
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>
+              · {data.fetchedAt} 업데이트
+            </span>
+          )}
         </div>
 
         {/* ── 자산 카테고리 탭 ── */}
@@ -583,9 +574,9 @@ export default function MarketDaily() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <span style={{
               fontSize: 10, padding: "3px 10px", borderRadius: 20, fontWeight: 600, flexShrink: 0,
-              background: data.sentiment === "bullish" ? "rgba(255,59,59,0.12)" : "rgba(77,138,255,0.12)",
-              color: data.sentiment === "bullish" ? BULL : BEAR,
-              border: `1px solid ${data.sentiment === "bullish" ? "rgba(255,59,59,0.3)" : "rgba(77,138,255,0.3)"}`,
+              background: data.sentiment === "bullish" ? "rgba(0,229,160,0.12)" : "rgba(255,77,109,0.12)",
+              color: data.sentiment === "bullish" ? "#00e5a0" : "#ff4d6d",
+              border: `1px solid ${data.sentiment === "bullish" ? "rgba(0,229,160,0.3)" : "rgba(255,77,109,0.3)"}`,
             }}>
               {data.sentiment === "bullish" ? "▲ 강세" : "▼ 약세"}
             </span>
@@ -631,8 +622,8 @@ export default function MarketDaily() {
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               flex: 1, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
               fontSize: 12.5, fontWeight: tab === t.key ? 600 : 400, padding: "10px 4px",
-              color: tab === t.key ? accentColor : "rgba(255,255,255,0.32)",
-              borderBottom: `2px solid ${tab === t.key ? accentColor : "transparent"}`,
+              color: tab === t.key ? "#00e5a0" : "rgba(255,255,255,0.32)",
+              borderBottom: `2px solid ${tab === t.key ? "#00e5a0" : "transparent"}`,
               transition: "all .2s",
             }}>{t.label}</button>
           ))}
