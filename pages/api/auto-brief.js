@@ -23,11 +23,11 @@ const JSON_SCHEMA = `{
 }`;
 
 const RULES = `규칙:
-- issues 최대 3개 (중요도 순)
+- issues 최대 3개: 복수 언론사에서 중복 언급된 키워드가 포함된 기사를 우선 선정 (= 더 사실에 가까운 뉴스)
 - picks BUY/SELL/WATCH 중 하나, 최대 3개
 - sectors 최대 5개
-- 뉴스 데이터가 적더라도 일반 시황 지식으로 보완하여 반드시 완성된 내용 작성
-- oneLineSummary와 summary에 "뉴스 부재", "뉴스 부족", "데이터 없음" 등 수집 실패 관련 메타 표현 절대 금지. 시황 내용만 작성
+- [복수 언론사 공통 언급 키워드] 항목이 있으면 해당 키워드가 포함된 이슈를 issues 상위에 배치
+- oneLineSummary와 summary에 "뉴스 부재", "뉴스 부족", "데이터 없음" 등 수집 실패 관련 메타 표현 절대 금지
 - 반드시 완성된 JSON만 출력`;
 
 // ── 시장별 뉴스 소스 (Google News RSS — 안정적 실시간 헤드라인) ──
@@ -71,7 +71,7 @@ async function fetchGoogleNewsRSS(query) {
     if (!r.ok) return null;
     const xml = await r.text();
     const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
-    const parsed = items.slice(0, 15).map((item) => {
+    const parsed = items.slice(0, 25).map((item) => {
       const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]
         || item.match(/<title>(.*?)<\/title>/)?.[1] || "";
       const link = item.match(/<link>(.*?)<\/link>/)?.[1]
@@ -117,20 +117,29 @@ async function processMarket(market, date) {
     .filter((r) => r.status === "fulfilled" && r.value)
     .flatMap((r) => r.value);
 
-  // 헤드라인 텍스트 (전체 목록)
+  // 중복 키워드 빈도 분석 — 여러 언론사가 언급한 키워드일수록 신뢰도 높음
+  const keywordCount = {};
+  const stopWords = new Set(["및","관련","위한","대한","통해","따른","속에","으로","에서","이에","하는","있는","되는","지난","오는","이번","지속","강화","확대","하락","상승","전망","발표","예정","진행","증가","감소"]);
+  allItems.forEach(({ title }) => {
+    const words = title.replace(/[^가-힣a-zA-Z0-9\s]/g, " ").split(/\s+/)
+      .filter(w => w.length >= 2 && !stopWords.has(w));
+    words.forEach(w => { keywordCount[w] = (keywordCount[w] || 0) + 1; });
+  });
+  // 2개 이상 언론사가 언급한 키워드 추출 (빈도 내림차순)
+  const hotKeywords = Object.entries(keywordCount)
+    .filter(([, c]) => c >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 20)
+    .map(([w, c]) => `${w}(${c}건)`)
+    .join(", ");
+
   const headlineText = allItems.length > 0
-    ? `[수집된 헤드라인 ${allItems.length}건]\n` + allItems.map(i => `[${i.src}] ${i.title}`).join("\n")
+    ? `[수집된 헤드라인 ${allItems.length}건 — ${[...new Set(allItems.map(i=>i.src))].length}개 언론사]\n`
+      + (hotKeywords ? `[복수 언론사 공통 언급 키워드: ${hotKeywords}]\n\n` : "")
+      + allItems.map(i => `[${i.src}] ${i.title}`).join("\n")
     : "";
 
-  // 2단계: 상위 4개 기사 본문 병렬 fetch (Jina)
-  const topLinks = allItems.slice(0, 4).map(i => i.link).filter(Boolean);
-  const bodies = await Promise.allSettled(topLinks.map(fetchArticleBody));
-  const bodyTexts = bodies
-    .filter((r) => r.status === "fulfilled" && r.value)
-    .map((r, i) => `[기사 ${i + 1} 본문]\n${r.value}`);
-
-  const combinedText = [headlineText, ...bodyTexts].filter(Boolean).join("\n\n===\n\n")
-    || `${market.label} 최신 동향을 분석해주세요. 오늘 날짜: ${date}`;
+  const combinedText = headlineText || `${market.label} 최신 동향을 분석해주세요. 오늘 날짜: ${date}`;
 
   // 2. Claude AI 분석
   const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
@@ -199,7 +208,67 @@ ${JSON_SCHEMA}`,
 
   if (error) throw new Error(`Supabase 저장 실패 (${market.key}): ${error.message}`);
 
-  return { key: market.key, ok: true, headlinesUsed: allItems.length, bodiesFetched: bodyTexts.length };
+  return { key: market.key, ok: true, headlinesUsed: allItems.length };
+}
+
+// ── 이메일 알림 (Resend API) ─────────────────────────────────────
+const MARKET_LABELS = { us: "미국 주식", kr: "한국 주식", crypto: "가상자산", realty: "부동산" };
+
+async function sendBriefEmail({ date, batch, summary }) {
+  const resendKey = process.env.RESEND_API_KEY;
+  const toEmail   = process.env.BRIEF_NOTIFY_EMAIL;
+  if (!resendKey || !toEmail) return; // 키 없으면 조용히 스킵
+
+  const successCount = summary.filter(r => r.status === "ok").length;
+  const allOk = successCount === summary.length;
+  const batchLabel = batch === "a" ? "09:00 (미국·한국)" : "09:10 (가상자산·부동산)";
+
+  const rows = summary.map(r => {
+    const icon  = r.status === "ok" ? "✅" : "❌";
+    const label = MARKET_LABELS[r.market] || r.market;
+    const detail = r.status === "ok"
+      ? `헤드라인 ${r.headlinesUsed}건 분석`
+      : `오류: ${r.error}`;
+    return `<tr><td style="padding:6px 12px">${icon}</td><td style="padding:6px 12px"><b>${label}</b></td><td style="padding:6px 12px;color:#555">${detail}</td></tr>`;
+  }).join("");
+
+  const subject = allOk
+    ? `✅ [+α] ${date} 시황 업데이트 완료 (batch ${batch})`
+    : `⚠️ [+α] ${date} 시황 일부 실패 (batch ${batch}) — ${successCount}/${summary.length}`;
+
+  const html = `
+<div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+  <h2 style="color:#1a1a2e">+α Plusalpha 시황 브리핑</h2>
+  <p style="color:#444">${date} ${batchLabel} 배치 결과입니다.</p>
+  <table style="border-collapse:collapse;width:100%">
+    <thead><tr style="background:#f0f0f0">
+      <th style="padding:6px 12px;text-align:left">상태</th>
+      <th style="padding:6px 12px;text-align:left">시장</th>
+      <th style="padding:6px 12px;text-align:left">상세</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <p style="margin-top:16px"><a href="https://skstock.vercel.app" style="color:#6c63ff;font-weight:bold">👉 시황 보러가기</a></p>
+  <p style="color:#aaa;font-size:12px">+α Plusalpha 자동 발송 — 매일 09:00 / 09:10 KST</p>
+</div>`;
+
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${resendKey}`,
+      },
+      body: JSON.stringify({
+        from: "Plusalpha <onboarding@resend.dev>",
+        to: [toEmail],
+        subject,
+        html,
+      }),
+    });
+  } catch (e) {
+    console.error("[auto-brief] 이메일 발송 실패:", e?.message);
+  }
 }
 
 // ── 메인 핸들러 ─────────────────────────────────────────────────
@@ -242,7 +311,7 @@ export default async function handler(req, res) {
   for (const m of MARKETS) {
     try {
       const result = await processMarket(m, date);
-      summary.push({ market: m.key, status: "ok", headlinesUsed: result.headlinesUsed, bodiesFetched: result.bodiesFetched });
+      summary.push({ market: m.key, status: "ok", headlinesUsed: result.headlinesUsed });
       console.log(`[auto-brief] ✓ ${m.key} 저장 완료`);
     } catch (err) {
       summary.push({ market: m.key, status: "error", error: String(err?.message || err) });
@@ -252,6 +321,9 @@ export default async function handler(req, res) {
 
   const successCount = summary.filter((r) => r.status === "ok").length;
   console.log(`[auto-brief] 완료: ${date} batch=${batch} — ${successCount}/${MARKETS.length} 성공`);
+
+  // 이메일 알림 발송 (실패해도 응답에 영향 없음)
+  sendBriefEmail({ date, batch, summary }).catch(() => {});
 
   return res.status(200).json({
     date,
