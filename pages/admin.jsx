@@ -26,7 +26,7 @@ const toBase64 = (file) => new Promise((res, rej) => {
 const actionColor = (a) =>
   a === "BUY" ? "#34d399" : a === "SELL" ? "#ff4d6d" : "#f5c842";
 
-const BATCH_TIMES = ["09:00", "13:00", "18:00", "23:00"];
+const BATCH_TIMES = ["09:00", "09:10"];
 
 const ASSET_TABS = [
   { key: "stock",  label: "주식",     color: "#4d8aff" },
