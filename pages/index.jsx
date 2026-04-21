@@ -531,11 +531,6 @@ export default function MarketDaily() {
                 <option key={opt.value} value={opt.value} style={{ background: "#1a1c24" }}>{opt.label}</option>
               ))}
             </select>
-            {data && (
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>
-                · {data.fetchedAt} 업데이트
-              </span>
-            )}
           </div>
         </div>
 
