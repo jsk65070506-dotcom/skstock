@@ -48,25 +48,25 @@ const normalizeData = (json) => ({
 });
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
-// 한국 기준: 상승 = 빨강, 하락 = 파랑
-const BULL = "#ff3b3b";
-const BEAR = "#4d8aff";
+// +α Brand System V2: Emerald = 상승/긍정, Terracotta = 하락/경고
+const BULL = "#34D399";   // signal-up
+const BEAR = "#E08968";   // signal-down
 const sentimentColor = (s) => s === "bullish" ? BULL : BEAR;
 const actionStyle = (a) => {
-  if (a === "BUY")  return { bg: "rgba(255,59,59,0.15)",  color: BULL, border: `1px solid rgba(255,59,59,0.4)` };
-  if (a === "SELL") return { bg: "rgba(77,138,255,0.15)", color: BEAR, border: `1px solid rgba(77,138,255,0.4)` };
-  return               { bg: "rgba(245,200,66,0.12)",   color: "#f5c842",  border: "1px solid rgba(245,200,66,0.35)" };
+  if (a === "BUY")  return { bg: "rgba(52,211,153,0.12)",  color: BULL, border: "1px solid rgba(52,211,153,0.28)" };
+  if (a === "SELL") return { bg: "rgba(224,137,104,0.12)", color: BEAR, border: "1px solid rgba(224,137,104,0.28)" };
+  return               { bg: "rgba(159,179,166,0.10)",  color: "#9FB3A6", border: "1px solid rgba(159,179,166,0.25)" };
 };
 
 const ScoreBar = ({ score }) => (
   <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-    <div style={{ flex: 1, height: 3, background: "rgba(255,255,255,0.07)", borderRadius: 2, overflow: "hidden" }}>
+    <div style={{ flex: 1, height: 3, background: "var(--line)", borderRadius: 2, overflow: "hidden" }}>
       <div style={{
         width: `${score}%`, height: "100%", borderRadius: 2,
-        background: score > 70 ? BULL : score > 50 ? "#f5c842" : BEAR,
+        background: score >= 70 ? "#34D399" : score >= 50 ? "#9FB3A6" : "#E08968",
       }} />
     </div>
-    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", width: 26, textAlign: "right" }}>{score}</span>
+    <span style={{ fontSize: 11, color: "var(--ink-3)", width: 26, textAlign: "right", fontFamily: "var(--font-mono)" }}>{score}</span>
   </div>
 );
 
@@ -98,9 +98,9 @@ const INDEX_CHART_DATA = {
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "7px 11px" }}>
-      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginBottom: 3 }}>{label}</div>
-      <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{payload[0].value.toLocaleString()}</div>
+    <div style={{ background: "var(--surface-2)", border: "1px solid var(--line-strong)", borderRadius: 8, padding: "7px 11px" }}>
+      <div style={{ fontSize: 10, color: "var(--ink-3)", marginBottom: 3, fontFamily: "var(--font-mono)" }}>{label}</div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-mono)" }}>{payload[0].value.toLocaleString()}</div>
     </div>
   );
 };
@@ -125,9 +125,9 @@ const IndexDetailSheet = ({ idx, onClose, accentColor }) => {
       <div style={{
         position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
         width: "100%", maxWidth: 480, zIndex: 100,
-        background: "#0f1117",
+        background: "var(--surface)",
         borderRadius: "20px 20px 0 0",
-        border: "1px solid rgba(255,255,255,0.09)",
+        border: "1px solid var(--line-strong)",
         animation: "slideUp 0.28s cubic-bezier(.32,1.2,.5,1) both",
       }}>
         <style>{`@keyframes slideUp { from{transform:translateX(-50%) translateY(100%)} to{transform:translateX(-50%) translateY(0)} }`}</style>
@@ -141,13 +141,13 @@ const IndexDetailSheet = ({ idx, onClose, accentColor }) => {
           {/* Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
             <div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4 }}>오늘 · 장중</div>
+              <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 4 }}>오늘 · 장중</div>
               <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5 }}>{idx.name}</div>
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 22, fontWeight: 700, color }}>{idx.value}</div>
-              <div style={{ fontSize: 12, color, marginTop: 2 }}>
-                {isUp ? "▲" : "▼"} {Math.abs(changePct)}%
+              <div style={{ fontSize: 12, color, marginTop: 2, fontFamily: "var(--font-mono)" }}>
+                {isUp ? "+" : "−"}{Math.abs(changePct)}%
               </div>
             </div>
           </div>
@@ -178,18 +178,18 @@ const IndexDetailSheet = ({ idx, onClose, accentColor }) => {
           ].map(([label, val]) => (
             <div key={label} style={{
               display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "11px 0", borderBottom: "1px solid rgba(255,255,255,0.05)",
+              padding: "11px 0", borderBottom: "1px solid var(--line)",
             }}>
-              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.38)" }}>{label}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: label === "등락" ? color : "#dde1ea" }}>{val}</span>
+              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>{label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: label === "등락" ? color : "var(--ink)", fontFamily: "var(--font-mono)" }}>{val}</span>
             </div>
           ))}
 
           {/* Close btn */}
           <button onClick={onClose} style={{
             marginTop: 20, width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
-            background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)",
-            fontFamily: "inherit", fontSize: 13, cursor: "pointer",
+            background: "var(--line)", color: "var(--ink-2)",
+            fontFamily: "var(--font-sans)", fontSize: 13, cursor: "pointer",
           }}>닫기</button>
         </div>
       </div>
@@ -318,8 +318,8 @@ const ScreenshotUploadSheet = ({ market, onClose, onResult }) => {
       <div style={{
         position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
         width: "100%", maxWidth: 480, zIndex: 100,
-        background: "#0f1117", borderRadius: "20px 20px 0 0",
-        border: "1px solid rgba(255,255,255,0.09)",
+        background: "var(--surface)", borderRadius: "20px 20px 0 0",
+        border: "1px solid var(--line-strong)",
         animation: "slideUp 0.28s cubic-bezier(.32,1.2,.5,1) both",
       }}>
         {/* Handle */}
@@ -387,7 +387,7 @@ const ScreenshotUploadSheet = ({ market, onClose, onResult }) => {
 
           {/* Error */}
           {error && (
-            <div style={{ marginBottom: 12, fontSize: 11, color: "#ff4d6d", background: "rgba(255,77,109,0.08)", border: "1px solid rgba(255,77,109,0.2)", borderRadius: 8, padding: "10px 12px", whiteSpace: "pre-line" }}>
+            <div style={{ marginBottom: 12, fontSize: 11, color: "#E08968", background: "rgba(224,137,104,0.08)", border: "1px solid rgba(224,137,104,0.2)", borderRadius: 8, padding: "10px 12px", whiteSpace: "pre-line" }}>
               {error}
             </div>
           )}
@@ -399,8 +399,8 @@ const ScreenshotUploadSheet = ({ market, onClose, onResult }) => {
             style={{
               width: "100%", padding: "14px 0", borderRadius: 12, border: "none", cursor: images.length && !analyzing ? "pointer" : "not-allowed",
               fontFamily: "inherit", fontSize: 14, fontWeight: 700,
-              background: images.length && !analyzing ? "#34d399" : "rgba(255,255,255,0.07)",
-              color: images.length && !analyzing ? "#07080c" : "rgba(255,255,255,0.25)",
+              background: images.length && !analyzing ? "#34D399" : "rgba(255,255,255,0.07)",
+              color: images.length && !analyzing ? "#0A1510" : "rgba(255,255,255,0.25)",
               transition: "all 0.2s",
             }}
           >
@@ -428,8 +428,8 @@ const DATE_OPTIONS = (() => {
 
 const ASSET_TABS = [
   { key: "stock",  label: "주식" },
-  { key: "crypto", label: "가상자산" },
   { key: "realty", label: "부동산" },
+  { key: "crypto", label: "가상자산" },
   { key: "frac",   label: "실물자산" },
 ];
 
@@ -470,7 +470,7 @@ export default function MarketDaily() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const accentColor = stockMarket === "us" ? "#4d8aff" : "#ff6b35";
+  const accentColor = "#34D399";
 
   const switchMarket = (mkt) => { setStockMarket(mkt); setTab("news"); setExpanded(null); };
 
@@ -480,14 +480,43 @@ export default function MarketDaily() {
         <title>+α | 월급만으론 부족한 우리를 위해</title>
       </Head>
     <div style={{
-      fontFamily: "'IBM Plex Mono', monospace",
-      background: "#07080c", minHeight: "100vh",
-      maxWidth: 480, margin: "0 auto", color: "#dde1ea",
+      fontFamily: "var(--font-sans)",
+      background: "var(--bg)", minHeight: "100vh",
+      maxWidth: 480, margin: "0 auto", color: "var(--ink)",
       display: "flex", flexDirection: "column",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
-        * { box-sizing: border-box; }
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@1,500&display=swap');
+
+        :root {
+          --bg: #0A1510;
+          --surface: #101F18;
+          --surface-2: #0F1C16;
+          --ink: #E8EFEA;
+          --ink-2: #9FB3A6;
+          --ink-3: #6B8274;
+          --line: rgba(232,239,234,0.08);
+          --line-strong: rgba(232,239,234,0.14);
+          --accent: #34D399;
+          --accent-soft: rgba(52,211,153,0.12);
+          --accent-border: rgba(52,211,153,0.28);
+          --signal-up: #34D399;
+          --signal-down: #E08968;
+          --signal-neutral: #9FB3A6;
+          --font-sans: 'Pretendard Variable', 'Pretendard', system-ui, sans-serif;
+          --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+          --font-serif: 'Cormorant Garamond', serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          background: var(--bg);
+          font-family: var(--font-sans);
+          color: var(--ink);
+          -webkit-font-smoothing: antialiased;
+          letter-spacing: -0.01em;
+        }
         ::-webkit-scrollbar { display: none; }
         @keyframes fadeUp { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
         .fade-up { animation: fadeUp .28s ease both; }
@@ -496,19 +525,23 @@ export default function MarketDaily() {
       `}</style>
 
       {/* ── HEADER ── */}
-      <div style={{ padding: "16px 16px 0", position: "sticky", top: 0, background: "#07080c", zIndex: 50 }}>
+      <div style={{ padding: "16px 16px 0", position: "sticky", top: 0, background: "var(--bg)", zIndex: 50 }}>
         {/* 1줄: 왼쪽(BI) + 오른쪽(날짜+업데이트) */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           {/* 왼쪽: +α + 태그라인 + BETA */}
           <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: "#00e5a0", fontStyle: "italic", lineHeight: 1, flexShrink: 0 }}>+α</span>
-            <span style={{ fontSize: 9, color: "rgba(255,255,255,0.38)", letterSpacing: 0.1, lineHeight: 1 }}>월급만으론 부족한 우리를 위해</span>
+            <span style={{ display: "inline-flex", alignItems: "baseline", gap: 1, color: "var(--accent)", flexShrink: 0 }}>
+              <span style={{ fontSize: 13, fontWeight: 500, transform: "translateY(-3px)", display: "inline-block" }}>+</span>
+              <span style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontWeight: 500, fontSize: 24, lineHeight: 1 }}>α</span>
+            </span>
+            <span style={{ fontSize: 9, color: "var(--ink-3)", letterSpacing: -0.005, lineHeight: 1, fontWeight: 500 }}>월급만으론 부족한 우리를 위해</span>
             <span style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: 1,
-              padding: "2px 6px", borderRadius: 4, flexShrink: 0,
-              background: "rgba(255,255,255,0.07)",
-              color: "rgba(255,255,255,0.4)",
-              border: "1px solid rgba(255,255,255,0.15)",
+              fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.14em",
+              padding: "2px 6px", borderRadius: 3, flexShrink: 0,
+              background: "transparent",
+              color: "var(--ink-3)",
+              border: "1px solid var(--line)",
+              textTransform: "uppercase",
             }}>BETA</span>
           </div>
           {/* 오른쪽: 날짜 select + 업데이트 시각 */}
@@ -517,10 +550,10 @@ export default function MarketDaily() {
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: 20, color: "rgba(255,255,255,0.7)",
-                fontFamily: "inherit", fontSize: 12,
+                background: "var(--surface-2)",
+                border: "1px solid var(--line)",
+                borderRadius: 20, color: "var(--ink-2)",
+                fontFamily: "var(--font-mono)", fontSize: 12,
                 padding: "6px 26px 6px 14px", cursor: "pointer", outline: "none",
                 appearance: "none", WebkitAppearance: "none",
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
@@ -528,7 +561,7 @@ export default function MarketDaily() {
               }}
             >
               {DATE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value} style={{ background: "#1a1c24" }}>{opt.label}</option>
+                <option key={opt.value} value={opt.value} style={{ background: "#0F1C16" }}>{opt.label}</option>
               ))}
             </select>
           </div>
@@ -540,26 +573,39 @@ export default function MarketDaily() {
             <button key={a.key} onClick={() => { setAssetTab(a.key); setData(null); setTab("news"); setExpanded(null); }} style={{
               flexShrink: 0,
               padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
-              fontFamily: "inherit", fontSize: 12, fontWeight: assetTab === a.key ? 700 : 500,
+              fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: assetTab === a.key ? 600 : 500,
+              letterSpacing: "-0.01em",
               transition: "all 0.18s",
-              background: assetTab === a.key ? "#00e5a0" : "rgba(255,255,255,0.06)",
-              color: assetTab === a.key ? "#07080c" : "rgba(255,255,255,0.45)",
+              background: assetTab === a.key ? "var(--accent-soft)" : "var(--surface-2)",
+              color: assetTab === a.key ? "var(--accent)" : "var(--ink-3)",
+              border: `1px solid ${assetTab === a.key ? "var(--accent-border)" : "var(--line)"}`,
             }}>{a.label}</button>
           ))}
         </div>
 
         {/* Market toggle — 주식 탭일 때만 */}
         {assetTab === "stock" && (
-        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-          {[{ key: "us", label: "🇺🇸 미국", color: "#4d8aff" }, { key: "kr", label: "🇰🇷 한국", color: "#ff6b35" }].map((m) => (
-            <button key={m.key} onClick={() => switchMarket(m.key)} style={{
-              flex: 1, padding: "9px 0", borderRadius: 10, border: "none", cursor: "pointer",
-              fontFamily: "inherit", fontSize: 13, fontWeight: 600, transition: "all 0.2s",
-              background: market === m.key ? m.color : "rgba(255,255,255,0.05)",
-              color: market === m.key ? "#fff" : "rgba(255,255,255,0.4)",
-              boxShadow: market === m.key ? `0 2px 14px ${m.color}44` : "none",
-            }}>{m.label}</button>
-          ))}
+        <div style={{ display: "flex", gap: 20, marginBottom: 8, paddingLeft: 2 }}>
+          {[{ key: "us", code: "US", ko: "미국" }, { key: "kr", code: "KR", ko: "한국" }].map((m) => {
+            const isActive = market === m.key;
+            return (
+              <button key={m.key} onClick={() => switchMarket(m.key)} style={{
+                display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2,
+                background: "none", border: "none", padding: "4px 0", cursor: "pointer",
+              }}>
+                <span style={{
+                  fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.14em",
+                  fontWeight: 600, color: isActive ? "var(--accent)" : "var(--ink-3)",
+                }}>{m.code}</span>
+                <span style={{
+                  fontSize: 13, fontWeight: isActive ? 600 : 500,
+                  color: isActive ? "var(--ink)" : "var(--ink-2)",
+                  letterSpacing: "-0.01em",
+                }}>{m.ko}</span>
+                <div style={{ height: 1, width: "100%", background: isActive ? "var(--accent)" : "transparent", marginTop: 2 }} />
+              </button>
+            );
+          })}
         </div>
         )}
 
@@ -572,14 +618,14 @@ export default function MarketDaily() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
             <span style={{
               fontSize: 10, padding: "3px 10px", borderRadius: 20, fontWeight: 600, flexShrink: 0,
-              background: data.sentiment === "bullish" ? "rgba(0,229,160,0.12)" : "rgba(255,77,109,0.12)",
-              color: data.sentiment === "bullish" ? "#00e5a0" : "#ff4d6d",
-              border: `1px solid ${data.sentiment === "bullish" ? "rgba(0,229,160,0.3)" : "rgba(255,77,109,0.3)"}`,
+              background: data.sentiment === "bullish" ? "var(--accent-soft)" : "rgba(224,137,104,0.12)",
+              color: data.sentiment === "bullish" ? "var(--accent)" : "#E08968",
+              border: `1px solid ${data.sentiment === "bullish" ? "var(--accent-border)" : "rgba(224,137,104,0.28)"}`,
             }}>
-              {data.sentiment === "bullish" ? "▲ 강세" : "▼ 약세"}
+              {data.sentiment === "bullish" ? "+ 강세" : "− 약세"}
             </span>
             {!hideOneliner && (
-              <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", lineHeight: 1.45 }}>{data.oneLineSummary}</span>
+              <span style={{ fontSize: 11.5, color: "var(--ink-2)", lineHeight: 1.45, letterSpacing: "-0.01em" }}>{data.oneLineSummary}</span>
             )}
           </div>
           );
@@ -590,15 +636,15 @@ export default function MarketDaily() {
           {(data?.indices || []).map((idx) => {
             const fgNum = idx.name === "Fear & Greed" ? parseFloat(idx.value) : null;
             const fgLabel = fgNum !== null
-              ? fgNum < 25  ? { text: "🔴 극단적 공포", color: "#ff4d6d" }
-              : fgNum < 45  ? { text: "🟡 공포",        color: "#f5c842" }
-              : fgNum < 55  ? { text: "⚪ 중립",         color: "rgba(255,255,255,0.55)" }
-              : fgNum < 75  ? { text: "🟢 탐욕",         color: "#34d399" }
-              :               { text: "🔵 극단적 탐욕",  color: "#4d8aff" }
+              ? fgNum < 25  ? { text: "극단적 공포", color: "#E08968" }
+              : fgNum < 45  ? { text: "공포",        color: "#9FB3A6" }
+              : fgNum < 55  ? { text: "중립",         color: "var(--ink-3)" }
+              : fgNum < 75  ? { text: "탐욕",         color: "#34D399" }
+              :               { text: "극단적 탐욕",  color: "#34D399" }
               : null;
             return (
               <div key={idx.name} style={{
-                flexShrink: 0, background: "rgba(255,255,255,0.04)", border: `1px solid ${fgLabel ? fgLabel.color + "33" : "rgba(255,255,255,0.07)"}`,
+                flexShrink: 0, background: "var(--surface)", border: `1px solid ${fgLabel ? fgLabel.color + "33" : "var(--line)"}`,
                 borderRadius: 10, padding: "8px 12px", minWidth: 86,
                 display: "flex", alignItems: "center",
               }}>
@@ -615,13 +661,16 @@ export default function MarketDaily() {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16 }}>
+        <div style={{ display: "flex", borderBottom: "1px solid var(--line)", marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16 }}>
           {[{ key: "news", label: "이슈" }, { key: "picks", label: "관심 종목" }, { key: "sectors", label: "섹터" }].map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
-              flex: 1, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
-              fontSize: 12.5, fontWeight: tab === t.key ? 600 : 400, padding: "10px 4px",
-              color: tab === t.key ? "#00e5a0" : "rgba(255,255,255,0.32)",
-              borderBottom: `2px solid ${tab === t.key ? "#00e5a0" : "transparent"}`,
+              flex: 1, background: "none", border: "none", cursor: "pointer",
+              fontFamily: "var(--font-sans)",
+              fontSize: 13, fontWeight: tab === t.key ? 600 : 500, padding: "12px 4px",
+              color: tab === t.key ? "var(--ink)" : "var(--ink-3)",
+              letterSpacing: "-0.01em",
+              position: "relative",
+              borderBottom: `2px solid ${tab === t.key ? "var(--accent)" : "transparent"}`,
               transition: "all .2s",
             }}>{t.label}</button>
           ))}
@@ -688,7 +737,7 @@ export default function MarketDaily() {
           if (!isNoData) {
             return (
               <div style={{ textAlign: "center", padding: "60px 20px" }}>
-                <div style={{ fontSize: 12, color: "#ff4d6d" }}>{fetchError}</div>
+                <div style={{ fontSize: 12, color: "#E08968" }}>{fetchError}</div>
               </div>
             );
           }
@@ -752,8 +801,8 @@ export default function MarketDaily() {
         <div style={{ marginBottom: 16, borderRadius: 12, border: "1px solid rgba(52,211,153,0.18)", overflow: "hidden" }}>
           <div style={{ background: "rgba(52,211,153,0.05)", padding: "13px 14px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ fontSize: 10, color: "#34d399", letterSpacing: 1.5, fontWeight: 500 }}>✦ AI 시황 요약</div>
-              <div className="tap" onClick={() => fetchData(true)} style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 5, padding: "3px 9px", cursor: "pointer", opacity: refreshing ? 0.5 : 1 }}>{refreshing ? "⏳" : "↻"} 최신으로</div>
+              <div style={{ fontSize: 10, color: "#34D399", letterSpacing: 1.5, fontWeight: 500 }}>✦ AI 시황 요약</div>
+              <div className="tap" onClick={() => fetchData(true)} style={{ fontSize: 10, color: "var(--ink-3)", background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 5, padding: "3px 9px", cursor: "pointer", opacity: refreshing ? 0.5 : 1, fontFamily: "var(--font-mono)" }}>{refreshing ? "⏳" : "↻"} 최신으로</div>
             </div>
             <p style={{ fontSize: 12.5, lineHeight: 1.75, color: "rgba(255,255,255,0.78)" }}>{data.summary}</p>
             {data.picks?.length > 0 && (
@@ -767,18 +816,18 @@ export default function MarketDaily() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 11, color: "#34d399", fontWeight: 600 }}>
+                  <span style={{ fontSize: 11, color: "#34D399", fontWeight: 600 }}>
                     {tab === "picks" ? "종목 닫기" : "관련 종목 보기"}
                   </span>
                   <span style={{
                     fontSize: 10, fontWeight: 700,
-                    background: "rgba(52,211,153,0.12)", color: "#34d399",
+                    background: "rgba(52,211,153,0.12)", color: "#34D399",
                     border: "1px solid rgba(52,211,153,0.25)",
                     borderRadius: 4, padding: "1px 6px",
                   }}>{data.picks.length}</span>
                 </div>
                 <span style={{
-                  fontSize: 13, color: "#34d399", opacity: 0.7,
+                  fontSize: 13, color: "#34D399", opacity: 0.7,
                   display: "inline-block",
                   transform: tab === "picks" ? "rotate(90deg)" : "rotate(0deg)",
                   transition: "transform 0.2s ease",
@@ -796,18 +845,18 @@ export default function MarketDaily() {
                 onClick={() => setExpanded(expanded === item.id ? null : item.id)}
                 style={{
                   marginBottom: 10, borderRadius: 12,
-                  border: `1px solid rgba(255,255,255,${expanded === item.id ? ".10" : ".06"})`,
-                  background: expanded === item.id ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.02)",
+                  border: `1px solid ${expanded === item.id ? "var(--line-strong)" : "var(--line)"}`,
+                  background: expanded === item.id ? "var(--surface)" : "rgba(16,31,24,0.6)",
                 }}>
                 <div style={{ padding: "13px 14px 12px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <span style={{
                       fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 500,
-                      background: `rgba(${item.sentiment === "bullish" ? "255,59,59" : "77,138,255"},0.1)`,
+                      background: item.sentiment === "bullish" ? "var(--accent-soft)" : "rgba(224,137,104,0.12)",
                       color: sentimentColor(item.sentiment),
-                      border: `1px solid rgba(${item.sentiment === "bullish" ? "255,59,59" : "77,138,255"},0.25)`,
+                      border: `1px solid ${item.sentiment === "bullish" ? "var(--accent-border)" : "rgba(224,137,104,0.28)"}`,
                     }}>
-                      {item.sentiment === "bullish" ? "▲ 강세" : "▼ 약세"}
+                      {item.sentiment === "bullish" ? "+ 강세" : "− 약세"}
                     </span>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 10, color: "rgba(255,255,255,0.22)" }}>#{item.sector}</span>
@@ -822,7 +871,7 @@ export default function MarketDaily() {
                   {item.tickers?.length > 0 && (
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                       {item.tickers.map((t) => (
-                        <span key={t} style={{ fontSize: 10, color: "rgba(255,255,255,0.42)", background: "rgba(255,255,255,0.05)", borderRadius: 4, padding: "2px 7px" }}>
+                        <span key={t} style={{ fontSize: 10, color: "var(--ink-3)", background: "var(--surface-2)", borderRadius: 4, padding: "2px 7px", fontFamily: "var(--font-mono)", letterSpacing: "0.04em" }}>
                           {market === "us" ? "$" : ""}{t}
                         </span>
                       ))}
@@ -830,8 +879,8 @@ export default function MarketDaily() {
                   )}
                 </div>
                 {expanded === item.id && (
-                  <div className="fade-up" style={{ padding: "0 14px 13px", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 11 }}>
-                    <p style={{ fontSize: 12.5, lineHeight: 1.72, color: "rgba(255,255,255,0.65)" }}>{item.body}</p>
+                  <div className="fade-up" style={{ padding: "0 14px 13px", borderTop: "1px solid var(--line)", paddingTop: 11 }}>
+                    <p style={{ fontSize: 12.5, lineHeight: 1.72, color: "var(--ink-2)" }}>{item.body}</p>
                   </div>
                 )}
               </div>
@@ -848,17 +897,17 @@ export default function MarketDaily() {
             {data.picks.map((pick, i) => {
               const st = actionStyle(pick.action);
               return (
-                <div key={`${pick.ticker}-${i}`} style={{ marginBottom: 10, borderRadius: 12, padding: "14px 15px", border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)" }}>
+                <div key={`${pick.ticker}-${i}`} style={{ marginBottom: 10, borderRadius: 12, padding: "14px 15px", border: "1px solid var(--line)", background: "var(--surface)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <div>
-                      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 3 }}>{pick.ticker}</div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.38)" }}>{pick.name}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 3, fontFamily: "var(--font-mono)", letterSpacing: "-0.01em" }}>{pick.ticker}</div>
+                      <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{pick.name}</div>
                     </div>
                     <div style={{ fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 7, background: st.bg, color: st.color, border: st.border }}>
                       {pick.action}
                     </div>
                   </div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.6, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 9 }}>
+                  <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.6, borderTop: "1px solid var(--line)", paddingTop: 9 }}>
                     {pick.reason}
                   </div>
                 </div>
@@ -874,7 +923,7 @@ export default function MarketDaily() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.45)", letterSpacing: 0.5 }}>섹터 모멘텀</span>
               <div style={{ display: "flex", gap: 10 }}>
-                {[["#00e5a0", "상승"], ["#f5c842", "보합"], ["#ff4d6d", "하락"]].map(([c, l]) => (
+                {[["#34D399", "상승"], ["#9FB3A6", "보합"], ["#E08968", "하락"]].map(([c, l]) => (
                   <span key={l} style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", display: "flex", alignItems: "center", gap: 4 }}>
                     <span style={{ color: c }}>●</span>{l}
                   </span>
@@ -885,12 +934,12 @@ export default function MarketDaily() {
             {/* 섹터 카드 목록 */}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {data.sectors.map((sec) => {
-                const barColor = sec.score >= 70 ? "#00e5a0" : sec.score >= 50 ? "#f5c842" : "#ff4d6d";
+                const barColor = sec.score >= 70 ? "#34D399" : sec.score >= 50 ? "#9FB3A6" : "#E08968";
                 const trendUp = sec.trend?.startsWith("▲");
                 const trendDown = sec.trend?.startsWith("▼");
-                const trendColor = trendUp ? "#00e5a0" : trendDown ? "#ff4d6d" : "#f5c842";
+                const trendColor = trendUp ? "#34D399" : trendDown ? "#E08968" : "#9FB3A6";
                 return (
-                  <div key={sec.name} style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div key={sec.name} style={{ padding: "14px 16px", borderRadius: 12, background: "var(--surface)", border: "1px solid var(--line)" }}>
                     {/* 섹터명 + 트렌드 + 스코어 */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -900,7 +949,7 @@ export default function MarketDaily() {
                       <span style={{ fontSize: 15, fontWeight: 700, color: barColor }}>{sec.score}</span>
                     </div>
                     {/* 스코어 바 */}
-                    <div style={{ height: 4, background: "rgba(255,255,255,0.07)", borderRadius: 2, overflow: "hidden" }}>
+                    <div style={{ height: 4, background: "var(--line)", borderRadius: 2, overflow: "hidden" }}>
                       <div style={{ width: `${sec.score}%`, height: "100%", borderRadius: 2, background: barColor }} />
                     </div>
                     {/* 노트 */}
@@ -917,22 +966,32 @@ export default function MarketDaily() {
       </div>
 
       {/* 포트폴리오 진단 링크 */}
-      <div style={{ padding: "8px 20px 32px", textAlign: "center" }}>
-        <a href="/portfolio" style={{
-          display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "10px 20px", borderRadius: 12,
-          border: "1px solid rgba(255,255,255,0.08)",
-          background: "rgba(255,255,255,0.02)",
-          color: "rgba(255,255,255,0.45)",
-          fontSize: 12, fontWeight: 600,
-          textDecoration: "none", fontFamily: "inherit",
-          letterSpacing: 0.2,
-        }}>
-          <span style={{ color: "#00e5a0", fontSize: 14 }}>◎</span>
-          포트폴리오 진단
-          <span style={{ opacity: 0.4, fontSize: 11 }}>→</span>
-        </a>
-      </div>
+      <a href="/portfolio" style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        margin: "4px 16px 32px",
+        padding: "14px 16px",
+        borderRadius: 10,
+        background: "var(--accent-soft)",
+        border: "1px solid var(--accent-border)",
+        textDecoration: "none",
+        color: "var(--accent)",
+      }}>
+        <div>
+          <div style={{
+            fontFamily: "var(--font-mono)", fontSize: 9,
+            letterSpacing: "0.16em", textTransform: "uppercase",
+            marginBottom: 3, opacity: 0.7,
+          }}>Diagnosis</div>
+          <div style={{
+            fontSize: 14, fontWeight: 600,
+            color: "var(--ink)", letterSpacing: "-0.01em",
+          }}>포트폴리오 진단</div>
+          <div style={{
+            fontSize: 11, color: "var(--ink-2)", marginTop: 2,
+          }}>내 배분과 목표의 편차를 확인</div>
+        </div>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 16 }}>→</span>
+      </a>
 
       {/* IndexDetailSheet: 실시간 데이터 연동 전까지 비활성화 */}
     </div>
