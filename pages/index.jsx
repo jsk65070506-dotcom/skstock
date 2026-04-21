@@ -616,7 +616,7 @@ export default function MarketDaily() {
 
         {/* Tabs */}
         <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16 }}>
-          {[{ key: "news", label: "이슈" }, { key: "picks", label: "추천 종목" }, { key: "sectors", label: "섹터" }].map((t) => (
+          {[{ key: "news", label: "이슈" }, { key: "picks", label: "관심 종목" }, { key: "sectors", label: "섹터" }].map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               flex: 1, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
               fontSize: 12.5, fontWeight: tab === t.key ? 600 : 400, padding: "10px 4px",
