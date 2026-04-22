@@ -5,6 +5,7 @@
 export const config = { maxDuration: 60 };
 
 import { supabase } from "../../lib/supabase";
+import { sendBriefToSubscribers } from "../../lib/emails/brief";
 
 // ── JSON 스키마 (analyze.js 와 동일) ─────────────────────────────
 const JSON_SCHEMA = `{
@@ -208,7 +209,7 @@ ${JSON_SCHEMA}`,
 
   if (error) throw new Error(`Supabase 저장 실패 (${market.key}): ${error.message}`);
 
-  return { key: market.key, ok: true, headlinesUsed: allItems.length };
+  return { key: market.key, ok: true, headlinesUsed: allItems.length, data: parsed };
 }
 
 // ── 이메일 알림 (Resend API) ─────────────────────────────────────
@@ -311,7 +312,7 @@ export default async function handler(req, res) {
   for (const m of MARKETS) {
     try {
       const result = await processMarket(m, date);
-      summary.push({ market: m.key, status: "ok", headlinesUsed: result.headlinesUsed });
+      summary.push({ market: m.key, status: "ok", headlinesUsed: result.headlinesUsed, data: result.data });
       console.log(`[auto-brief] ✓ ${m.key} 저장 완료`);
     } catch (err) {
       summary.push({ market: m.key, status: "error", error: String(err?.message || err) });
@@ -322,8 +323,42 @@ export default async function handler(req, res) {
   const successCount = summary.filter((r) => r.status === "ok").length;
   console.log(`[auto-brief] 완료: ${date} batch=${batch} — ${successCount}/${MARKETS.length} 성공`);
 
-  // 이메일 알림 발송 (실패해도 응답에 영향 없음)
+  // 운영자 이메일 알림 (실패해도 응답에 영향 없음)
   sendBriefEmail({ date, batch, summary }).catch(() => {});
+
+  // 구독자 이메일 발송 (성공한 시장만, 비동기 fire-and-forget)
+  ;(async () => {
+    try {
+      const { data: subs } = await supabase
+        .from("subscribers")
+        .select("email, unsubscribe_token, preferences")
+        .eq("is_active", true);
+
+      if (!subs?.length) return;
+
+      for (const result of summary) {
+        if (result.status !== "ok" || !result.data) continue;
+        const marketKey = result.market;
+        // preferences 필터 (us, kr, crypto, realestate)
+        const prefKey = marketKey === "realty" ? "realestate" : marketKey;
+        const filtered = subs.filter(s => {
+          const prefs = s.preferences || {};
+          return prefs[prefKey] !== false; // 기본 true
+        });
+        if (!filtered.length) continue;
+
+        const { sent, failed } = await sendBriefToSubscribers({
+          date,
+          market: marketKey,
+          data: result.data,
+          subscribers: filtered,
+        });
+        console.log(`[auto-brief] 구독자 발송 ${marketKey}: ${sent}명 성공, ${failed}명 실패`);
+      }
+    } catch (e) {
+      console.error("[auto-brief] 구독자 발송 오류:", e?.message);
+    }
+  })();
 
   return res.status(200).json({
     date,

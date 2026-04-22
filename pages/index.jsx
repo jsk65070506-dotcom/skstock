@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Head from "next/head";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import SubscribeForm from "../components/SubscribeForm";
 
 const ADSENSE_CLIENT = "ca-pub-8044640881453603";
 const ADSENSE_SLOT = "0000000000"; // 심사 통과 후 교체
@@ -837,6 +838,9 @@ export default function MarketDaily() {
           </div>
         </div>
 
+        {/* 구독 폼 — AI 요약 아래 첫 노출 */}
+        <SubscribeForm />
+
         {/* 이슈 탭 */}
         {tab === "news" && (
           <div className="fade-up">
@@ -963,6 +967,11 @@ export default function MarketDaily() {
           </div>
         )}
         </>)}
+      </div>
+
+      {/* 구독 폼 — 푸터 직전 두 번째 노출 */}
+      <div style={{ padding: "0 16px" }}>
+        <SubscribeForm variant="compact" />
       </div>
 
       {/* 포트폴리오 진단 링크 */}
