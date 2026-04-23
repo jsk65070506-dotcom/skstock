@@ -969,11 +969,6 @@ export default function MarketDaily() {
         </>)}
       </div>
 
-      {/* 구독 폼 — 푸터 직전 두 번째 노출 */}
-      <div style={{ padding: "0 16px" }}>
-        <SubscribeForm variant="compact" />
-      </div>
-
       {/* 포트폴리오 진단 링크 */}
       <a href="/portfolio" style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
