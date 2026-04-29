@@ -212,6 +212,42 @@ ${JSON_SCHEMA}`,
   return { key: market.key, ok: true, headlinesUsed: allItems.length, data: parsed };
 }
 
+// ── 텔레그램 알림 ────────────────────────────────────────────────
+async function sendTelegramBrief({ date, batch, summary }) {
+  const token  = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+
+  const successCount = summary.filter(r => r.status === "ok").length;
+  const allOk = successCount === summary.length;
+  const batchLabel = batch === "a" ? "미국·한국 주식" : "가상자산·부동산";
+  const [, m, d] = date.split("-");
+  const dateLabel = `${parseInt(m)}월 ${parseInt(d)}일`;
+  const icon = allOk ? "✅" : "⚠️";
+
+  const lines = summary.map(r => {
+    const statusIcon = r.status === "ok" ? "✓" : "✗";
+    const label = { us: "미국", kr: "한국", crypto: "가상자산", realty: "부동산" }[r.market] || r.market;
+    return `  ${statusIcon} ${label}`;
+  });
+
+  const text = [
+    `${icon} *+α 시황 업데이트* — ${dateLabel} ${batchLabel}`,
+    lines.join("\n"),
+    `👉 [skstock.vercel.app](https://skstock.vercel.app)`,
+  ].join("\n");
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown", disable_web_page_preview: true }),
+    });
+  } catch (e) {
+    console.error("[auto-brief] 텔레그램 발송 실패:", e?.message);
+  }
+}
+
 // ── 이메일 알림 (Resend API) ─────────────────────────────────────
 const MARKET_LABELS = { us: "미국 주식", kr: "한국 주식", crypto: "가상자산", realty: "부동산" };
 
@@ -323,8 +359,9 @@ export default async function handler(req, res) {
   const successCount = summary.filter((r) => r.status === "ok").length;
   console.log(`[auto-brief] 완료: ${date} batch=${batch} — ${successCount}/${MARKETS.length} 성공`);
 
-  // 운영자 이메일 알림 (실패해도 응답에 영향 없음)
+  // 운영자 이메일 + 텔레그램 알림 (실패해도 응답에 영향 없음)
   sendBriefEmail({ date, batch, summary }).catch(() => {});
+  sendTelegramBrief({ date, batch, summary }).catch(() => {});
 
   // 구독자 이메일 발송 (성공한 시장만, 비동기 fire-and-forget)
   ;(async () => {
