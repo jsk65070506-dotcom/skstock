@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     body: JSON.stringify({
       from: process.env.RESEND_FROM || "Plusalpha <onboarding@resend.dev>",
       to,
-      subject: `[미리보기] [Plusalpha] ${m}월 ${d}일 시황 4줄 요약`,
+      subject: `[미리보기] [Plusalpha] ${m}월 ${d}일 오늘의 뉴스`,
       html,
     }),
   });
