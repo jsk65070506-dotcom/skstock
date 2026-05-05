@@ -1,7 +1,8 @@
 // pages/index.jsx
-import React, { useState } from "react";
+import React from "react";
 import Head from "next/head";
 import SubscribeForm from "../components/SubscribeForm";
+import BriefingCard from "../components/BriefingCard";
 import { createClient } from "@supabase/supabase-js";
 
 // ── 브랜드 색상 ──────────────────────────────────────────────────
@@ -121,128 +122,7 @@ function rowToBrief(row, dateLabel) {
   };
 }
 
-// ── 픽 신호 스타일 ───────────────────────────────────────────────
-function signalStyle(signal) {
-  if (signal === "긍정") return { color: BULL, bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.3)" };
-  if (signal === "부정") return { color: BEAR, bg: "rgba(224,137,104,0.12)", border: "rgba(224,137,104,0.3)" };
-  return { color: NEUTRAL, bg: "rgba(159,179,166,0.10)", border: "rgba(159,179,166,0.25)" };
-}
-
-// ── 샘플 브리핑 카드 ─────────────────────────────────────────────
-function SampleCard({ brief }) {
-  const [open, setOpen] = useState(false);
-  const isUp = brief.sentiment === "bullish";
-  const sentimentColor = isUp ? BULL : BEAR;
-
-  return (
-    <div style={{
-      background: "#101F18",
-      border: "1px solid rgba(232,239,234,0.08)",
-      borderRadius: 12,
-      padding: "20px",
-      cursor: "pointer",
-      transition: "border-color 0.2s",
-    }}
-    onMouseEnter={(e) => e.currentTarget.style.borderColor = "rgba(52,211,153,0.25)"}
-    onMouseLeave={(e) => e.currentTarget.style.borderColor = "rgba(232,239,234,0.08)"}
-    onClick={() => setOpen(!open)}
-    >
-      {/* 헤더 */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 18 }}>{brief.flag}</span>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#E8EFEA" }}>{brief.label}</div>
-            <div style={{ fontSize: 10, color: "#6B8274" }}>{brief.date}</div>
-          </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 600,
-            background: isUp ? "rgba(52,211,153,0.12)" : "rgba(224,137,104,0.12)",
-            color: sentimentColor,
-            border: `1px solid ${isUp ? "rgba(52,211,153,0.28)" : "rgba(224,137,104,0.28)"}`,
-          }}>
-            {isUp ? "+ 강세" : "− 약세"}
-          </span>
-          <span style={{ fontSize: 12, color: "#6B8274" }}>{open ? "▲" : "▼"}</span>
-        </div>
-      </div>
-
-      {/* 한 줄 요약 */}
-      <div style={{ fontSize: 14, fontWeight: 600, color: "#E8EFEA", lineHeight: 1.4, marginBottom: 8 }}>
-        {brief.oneLineSummary}
-      </div>
-
-      {/* AI 요약 */}
-      <div style={{ fontSize: 12, color: "#9FB3A6", lineHeight: 1.6 }}>
-        {brief.summary}
-      </div>
-
-      {/* 확장 영역 */}
-      {open && (
-        <div style={{ marginTop: 16, borderTop: "1px solid rgba(232,239,234,0.06)", paddingTop: 16 }}>
-
-          {/* 주요 이슈 */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 10, letterSpacing: "0.1em", color: "#6B8274", marginBottom: 8, textTransform: "uppercase" }}>주요 이슈</div>
-            {brief.issues.map((issue, i) => (
-              <div key={i} style={{ paddingBottom: 10, marginBottom: 10, borderBottom: "1px solid rgba(232,239,234,0.05)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                  <span style={{
-                    fontSize: 9, padding: "1px 6px", borderRadius: 3, fontWeight: 600,
-                    background: issue.sentiment === "bullish" ? "rgba(52,211,153,0.12)" : "rgba(224,137,104,0.12)",
-                    color: issue.sentiment === "bullish" ? BULL : BEAR,
-                    border: `1px solid ${issue.sentiment === "bullish" ? "rgba(52,211,153,0.28)" : "rgba(224,137,104,0.28)"}`,
-                  }}>
-                    {issue.sentiment === "bullish" ? "+ 강세" : "− 약세"}
-                  </span>
-                  <span style={{ fontSize: 9, color: "#6B8274" }}>#{issue.sector}</span>
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#E8EFEA", lineHeight: 1.4 }}>{issue.title}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* 오늘의 주목 포인트 */}
-          <div>
-            <div style={{ fontSize: 10, letterSpacing: "0.1em", color: "#6B8274", marginBottom: 8, textTransform: "uppercase" }}>오늘의 주목 포인트</div>
-            {brief.picks.map((pick, i) => {
-              const sig = signalStyle(pick.signal);
-              return (
-                <div key={i} style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-                  padding: "8px 0", borderBottom: i < brief.picks.length - 1 ? "1px solid rgba(232,239,234,0.05)" : "none",
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#E8EFEA", fontFamily: "monospace" }}>{pick.ticker}</span>
-                      <span style={{ fontSize: 11, color: "#6B8274" }}>{pick.name}</span>
-                    </div>
-                    {pick.reason && (
-                      <div style={{ fontSize: 11, color: "#6B8274", marginTop: 2 }}>{pick.reason}</div>
-                    )}
-                  </div>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 5,
-                    background: sig.bg, color: sig.color, border: `1px solid ${sig.border}`,
-                    flexShrink: 0, marginLeft: 12,
-                  }}>
-                    {pick.signal}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div style={{ marginTop: 14, fontSize: 10, color: "#4A6353", lineHeight: 1.6 }}>
-            ※ 본 내용은 투자 권유가 아닌 정보 제공 목적입니다. 투자 판단의 책임은 본인에게 있습니다.
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+// ── F-02 완료: 샘플 잠금 해제 (이미 머지됨) ──────────────────────
 
 // ── 메인 페이지 ──────────────────────────────────────────────────
 export default function HomePage({ briefs, dateLabel, isLive }) {
@@ -309,14 +189,19 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
               주식·가상자산·부동산 뉴스를 <span style={{ color: "#00e5a0" }}>빠르게</span> 전달해드려요.
             </p>
 
-            {/* 구독 폼 */}
+            {/* F-01: Hero 인라인 이메일 폼 */}
             <div style={{ maxWidth: 400, margin: "0 auto" }}>
-              <SubscribeForm variant="hero" />
+              <SubscribeForm variant="default" />
             </div>
 
-            {/* 구독자 수 표시 */}
-            <div style={{ marginTop: 16, fontSize: 11, color: "#6B8274" }}>
-              지금 바로 무료로 시작하세요
+            {/* F-01: 마이크로카피 */}
+            <div style={{ marginTop: 12, fontSize: 11, color: "#6B8274", lineHeight: 1.6 }}>
+              평일 09:00 KST · 본문 5분 · 광고 없음 · 1클릭 해지
+            </div>
+
+            {/* F-03: AI 출처 한 줄 */}
+            <div style={{ marginTop: 20, fontSize: 11, color: "#4A6353", lineHeight: 1.6 }}>
+              AI가 매일 새벽, 주요 매체 헤드라인을 정리해 만듭니다. 투자 판단의 책임은 본인에게 있습니다.
             </div>
           </div>
 
@@ -360,9 +245,10 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
               </div>
             </div>
 
+            {/* F-13: BriefingCard 통일 구조 */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {briefs.map((brief) => (
-                <SampleCard key={brief.key} brief={brief} />
+                <BriefingCard key={brief.key} brief={brief} />
               ))}
             </div>
           </div>
