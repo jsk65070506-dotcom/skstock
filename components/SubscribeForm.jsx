@@ -83,8 +83,12 @@ export default function SubscribeForm({ variant = "default" }) {
       ) : (
         <form onSubmit={handleSubmit}>
           <div style={{ display: "flex", gap: 8 }}>
+            {/* F-11: aria-label, 포커스 링 */}
             <input
               type="email"
+              id="subscribe-email"
+              aria-label="구독 신청 이메일 주소"
+              aria-required="true"
               value={email}
               onChange={(e) => { setEmail(e.target.value); setStatus("idle"); }}
               placeholder="이메일 주소를 입력하세요"
@@ -95,6 +99,8 @@ export default function SubscribeForm({ variant = "default" }) {
                 color: "#E8EFEA", fontSize: 13, outline: "none",
                 fontFamily: "inherit",
               }}
+              onFocus={(e) => (e.target.style.boxShadow = "0 0 0 2px #34D399")}
+              onBlur={(e)  => (e.target.style.boxShadow = "none")}
             />
             {/* F-08: 로딩 시 disabled + 스피너 */}
             <button

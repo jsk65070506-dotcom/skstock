@@ -40,6 +40,12 @@ a {
   to { transform: rotate(360deg); }
 }
 
+/* F-11: 포커스 링 — 키보드 사용자 접근성 */
+:focus-visible {
+  outline: 2px solid #34D399;
+  outline-offset: 2px;
+}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;
