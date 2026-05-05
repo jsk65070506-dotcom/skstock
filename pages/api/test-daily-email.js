@@ -18,13 +18,6 @@ const SAMPLE_DATA = {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  // 간단한 인증
-  const auth = req.headers.authorization || "";
-  const token = auth.replace("Bearer ", "");
-  if (token !== process.env.CRON_SECRET) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) return res.status(500).json({ error: "RESEND_API_KEY 미설정" });
 
