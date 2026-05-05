@@ -60,12 +60,12 @@ export default function SubscribeForm({ variant = "default" }) {
             fontSize: 14, fontWeight: 700, color: "#E8EFEA",
             letterSpacing: -0.3, marginBottom: 4,
           }}>
-            매일 아침 9시, 당신의 메일함으로
+            매일 아침 9시, 시장을 먼저 파악하세요
           </div>
           <div style={{
             fontSize: 11.5, color: "#9FB3A6", marginBottom: 14, lineHeight: 1.5,
           }}>
-            월급만으론 부족한 직장인을 위한 AI 시황 브리핑
+            주식·가상자산·부동산 뉴스를 빠르게 전달해드려요.
           </div>
         </>
       )}
@@ -85,7 +85,7 @@ export default function SubscribeForm({ variant = "default" }) {
               type="email"
               value={email}
               onChange={(e) => { setEmail(e.target.value); setStatus("idle"); }}
-              placeholder="이메일 주소"
+              placeholder="이메일 주소를 입력하세요"
               disabled={status === "loading"}
               style={{
                 flex: 1, padding: "10px 14px", borderRadius: 8,
@@ -105,7 +105,7 @@ export default function SubscribeForm({ variant = "default" }) {
                 whiteSpace: "nowrap", fontFamily: "inherit", flexShrink: 0,
               }}
             >
-              {status === "loading" ? "..." : "무료 구독"}
+              {status === "loading" ? "..." : "무료로 받아보기"}
             </button>
           </div>
 
@@ -116,7 +116,7 @@ export default function SubscribeForm({ variant = "default" }) {
           <div style={{
             fontSize: 10, color: "#6B8274", marginTop: 8, textAlign: "center",
           }}>
-            언제든 해지 가능 · 광고성 메일 안 보냄
+            매일 아침 9시에 보내드려요. 언제든 해지할 수 있습니다.
           </div>
         </form>
       )}

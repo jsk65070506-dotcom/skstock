@@ -1,1005 +1,365 @@
-import React, { useState, useEffect, useRef } from "react";
+// pages/index.jsx
+import React, { useState } from "react";
 import Head from "next/head";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import SubscribeForm from "../components/SubscribeForm";
 
-const ADSENSE_CLIENT = "ca-pub-8044640881453603";
-const ADSENSE_SLOT = "0000000000"; // 심사 통과 후 교체
+// ── 브랜드 색상 ──────────────────────────────────────────────────
+const BULL = "#34D399";
+const BEAR = "#E08968";
+const NEUTRAL = "#9FB3A6";
 
-const AdBanner = () => {
-  const [visible, setVisible] = useState(false);
-  const lastScrollY = useRef(0);
-  const adLoaded = useRef(false);
+// ── 샘플 브리핑 데이터 ──────────────────────────────────────────
+const SAMPLE_BRIEFS = [
+  {
+    key: "us",
+    label: "미국 주식",
+    flag: "🇺🇸",
+    sentiment: "bullish",
+    date: "5월 4일",
+    oneLineSummary: "연준 동결 시사에 기술주 반등, S&P 500 사흘 만에 상승 전환",
+    summary: "파월 의장의 추가 인상 자제 발언이 시장을 안심시키며 빅테크 중심으로 매수세 유입. 나스닥 +1.4% 마감.",
+    issues: [
+      { title: "파월 '추가 인상 서두르지 않겠다' 발언", sentiment: "bullish", sector: "매크로" },
+      { title: "애플·MS 실적 예상치 상회 — 클라우드 부문 강세", sentiment: "bullish", sector: "빅테크" },
+      { title: "지역은행 예금 이탈 우려 재부상", sentiment: "bearish", sector: "금융" },
+    ],
+    picks: [
+      { ticker: "NVDA", name: "엔비디아", signal: "긍정", reason: "AI 칩 수요 지속 + 데이터센터 성장" },
+      { ticker: "MSFT", name: "마이크로소프트", signal: "긍정", reason: "애저 클라우드 성장률 회복" },
+      { ticker: "KRE", name: "지역은행 ETF", signal: "부정", reason: "예금 이탈 + 상업용 부동산 리스크" },
+    ],
+  },
+  {
+    key: "kr",
+    label: "한국 주식",
+    flag: "🇰🇷",
+    sentiment: "bearish",
+    date: "5월 4일",
+    oneLineSummary: "외국인 순매도 확대, 코스피 2,640선 하회 마감",
+    summary: "원화 약세와 글로벌 달러 강세가 겹치며 외국인이 코스피를 3거래일 연속 순매도. 반도체·2차전지 동반 하락.",
+    issues: [
+      { title: "외국인 코스피 3거래일 연속 순매도 — 5,800억 이탈", sentiment: "bearish", sector: "수급" },
+      { title: "원달러 환율 1,370원대 — 수입물가 부담 확대", sentiment: "bearish", sector: "환율" },
+      { title: "삼성전자 HBM 공급 확대 협상 긍정 신호", sentiment: "bullish", sector: "반도체" },
+    ],
+    picks: [
+      { ticker: "005930", name: "삼성전자", signal: "중립", reason: "HBM 수혜 기대 vs 단기 수급 부담" },
+      { ticker: "373220", name: "LG에너지솔루션", signal: "부정", reason: "미국 IRA 세액공제 불확실성 지속" },
+    ],
+  },
+];
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentY = window.scrollY;
-      const scrollingDown = currentY > lastScrollY.current;
-      const pastThreshold = currentY > 80;
-      setVisible(scrollingDown && pastThreshold);
-      lastScrollY.current = currentY;
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    if (!visible || adLoaded.current) return;
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-      adLoaded.current = true;
-    } catch (e) {
-      console.warn("AdSense push failed:", e);
-    }
-  }, [visible]);
-
-  // AdSense 심사 통과 후 활성화 예정 — 현재 숨김 처리
-  return null;
-};
-
-const normalizeData = (json) => ({
-  sentiment:      json.sentiment,
-  oneLineSummary: json.one_line_summary,
-  summary:        json.summary,
-  issues:         (json.issues  || []).map((item, i) => ({ ...item, id: item.id ?? i + 1, tickers: item.tickers || [] })),
-  picks:          json.picks   || [],
-  sectors:        json.sectors || [],
-  indices:        json.indices  || [],
-  fetchedAt:      json.batch_time,
-});
-
-// ── HELPERS ──────────────────────────────────────────────────────────────────
-// +α Brand System V2: Emerald = 상승/긍정, Terracotta = 하락/경고
-const BULL = "#34D399";   // signal-up
-const BEAR = "#E08968";   // signal-down
-const sentimentColor = (s) => s === "bullish" ? BULL : BEAR;
-const actionStyle = (a) => {
-  if (a === "BUY")  return { bg: "rgba(52,211,153,0.12)",  color: BULL, border: "1px solid rgba(52,211,153,0.28)" };
-  if (a === "SELL") return { bg: "rgba(224,137,104,0.12)", color: BEAR, border: "1px solid rgba(224,137,104,0.28)" };
-  return               { bg: "rgba(159,179,166,0.10)",  color: "#9FB3A6", border: "1px solid rgba(159,179,166,0.25)" };
-};
-
-const ScoreBar = ({ score }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-    <div style={{ flex: 1, height: 3, background: "var(--line)", borderRadius: 2, overflow: "hidden" }}>
-      <div style={{
-        width: `${score}%`, height: "100%", borderRadius: 2,
-        background: score >= 70 ? "#34D399" : score >= 50 ? "#9FB3A6" : "#E08968",
-      }} />
-    </div>
-    <span style={{ fontSize: 11, color: "var(--ink-3)", width: 26, textAlign: "right", fontFamily: "var(--font-mono)" }}>{score}</span>
-  </div>
-);
-
-// ── MOCK CHART DATA ──────────────────────────────────────────────────────────
-const generateChartData = (base, up) => {
-  const points = [];
-  let val = base;
-  const labels = ["09:00","09:30","10:00","10:30","11:00","11:30","12:00","13:00","13:30","14:00","14:30","15:00","15:30"];
-  labels.forEach((t, i) => {
-    const drift = (up ? 0.0008 : -0.0008) * i;
-    const noise = (Math.random() - 0.48) * base * 0.004;
-    val = val + val * drift + noise;
-    points.push({ time: t, value: parseFloat(val.toFixed(2)) });
-  });
-  return points;
-};
-
-const INDEX_CHART_DATA = {
-  "S&P 500": generateChartData(5200, true),
-  "나스닥":  generateChartData(16200, true),
-  "다우":    generateChartData(39100, false),
-  "Fear & Greed": generateChartData(58, true),
-  "코스피":  generateChartData(2640, false),
-  "코스닥":  generateChartData(860, false),
-  "원/달러": generateChartData(1368, true),
-  "3년물":   generateChartData(3.48, true),
-};
-
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{ background: "var(--surface-2)", border: "1px solid var(--line-strong)", borderRadius: 8, padding: "7px 11px" }}>
-      <div style={{ fontSize: 10, color: "var(--ink-3)", marginBottom: 3, fontFamily: "var(--font-mono)" }}>{label}</div>
-      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-mono)" }}>{payload[0].value.toLocaleString()}</div>
-    </div>
-  );
-};
-
-const IndexDetailSheet = ({ idx, onClose, accentColor }) => {
-  const chartData = INDEX_CHART_DATA[idx.name] || [];
-  const first = chartData[0]?.value || 0;
-  const last  = chartData[chartData.length - 1]?.value || 0;
-  const change = last - first;
-  const changePct = ((change / first) * 100).toFixed(2);
-  const isUp = change >= 0;
-  const color = isUp ? BULL : BEAR;
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div onClick={onClose} style={{
-        position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
-        zIndex: 90, backdropFilter: "blur(4px)",
-      }} />
-      {/* Sheet */}
-      <div style={{
-        position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
-        width: "100%", maxWidth: 480, zIndex: 100,
-        background: "var(--surface)",
-        borderRadius: "20px 20px 0 0",
-        border: "1px solid var(--line-strong)",
-        animation: "slideUp 0.28s cubic-bezier(.32,1.2,.5,1) both",
-      }}>
-        <style>{`@keyframes slideUp { from{transform:translateX(-50%) translateY(100%)} to{transform:translateX(-50%) translateY(0)} }`}</style>
-
-        {/* Handle */}
-        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 4px" }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)" }} />
-        </div>
-
-        <div style={{ padding: "8px 20px 40px" }}>
-          {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-            <div>
-              <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 4 }}>오늘 · 장중</div>
-              <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5 }}>{idx.name}</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color }}>{idx.value}</div>
-              <div style={{ fontSize: 12, color, marginTop: 2, fontFamily: "var(--font-mono)" }}>
-                {isUp ? "+" : "−"}{Math.abs(changePct)}%
-              </div>
-            </div>
-          </div>
-
-          {/* Chart */}
-          <div style={{ height: 180, marginBottom: 20 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor={color} stopOpacity={0.25} />
-                    <stop offset="95%" stopColor={color} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="time" tick={{ fontSize: 9.5, fill: "rgba(255,255,255,0.25)" }} axisLine={false} tickLine={false} interval={2} />
-                <YAxis hide domain={["auto", "auto"]} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="value" stroke={color} strokeWidth={1.8} fill="url(#chartGrad)" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Stats row */}
-          {[
-            ["시가", chartData[0]?.value.toLocaleString()],
-            ["현재가", last.toLocaleString()],
-            ["등락", `${isUp ? "+" : ""}${changePct}%`],
-          ].map(([label, val]) => (
-            <div key={label} style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "11px 0", borderBottom: "1px solid var(--line)",
-            }}>
-              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>{label}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: label === "등락" ? color : "var(--ink)", fontFamily: "var(--font-mono)" }}>{val}</span>
-            </div>
-          ))}
-
-          {/* Close btn */}
-          <button onClick={onClose} style={{
-            marginTop: 20, width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
-            background: "var(--line)", color: "var(--ink-2)",
-            fontFamily: "var(--font-sans)", fontSize: 13, cursor: "pointer",
-          }}>닫기</button>
-        </div>
-      </div>
-    </>
-  );
-};
-
-// ── SCREENSHOT UPLOAD SHEET ───────────────────────────────────────────────────
-const ScreenshotUploadSheet = ({ market, onClose, onResult }) => {
-  const [images, setImages] = useState([]);       // [{ file, base64, preview }]
-  const [analyzing, setAnalyzing] = useState(false);
-  const [error, setError] = useState(null);
-  const inputRef = React.useRef(null);
-
-  const toBase64 = (file) => new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(",")[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-
-  const handleFiles = async (files) => {
-    const remaining = 2 - images.length;
-    const selected = Array.from(files).slice(0, remaining);
-    const newImgs = await Promise.all(selected.map(async (file) => ({
-      file,
-      preview: URL.createObjectURL(file),
-      base64: await toBase64(file),
-      mediaType: file.type,
-    })));
-    setImages((prev) => [...prev, ...newImgs]);
-  };
-
-  const removeImage = (i) => setImages((prev) => prev.filter((_, idx) => idx !== i));
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    handleFiles(e.dataTransfer.files);
-  };
-
-  const handleAnalyze = async () => {
-    if (!images.length) return;
-    setAnalyzing(true);
-    setError(null);
-    try {
-      const marketLabel = market === "us" ? "미국 주식시장" : "한국 주식시장";
-      const content = [
-        ...images.map((img) => ({
-          type: "image",
-          source: { type: "base64", media_type: img.mediaType, data: img.base64 },
-        })),
-        {
-          type: "text",
-          text: `이 스크린샷은 ${marketLabel} 관련 뉴스/데이터 화면입니다.
-스크린샷에서 시황 정보를 추출해 아래 JSON 형식으로만 응답하세요. 마크다운 없이 순수 JSON만.
-
-{
-  "sentiment": "bullish" | "bearish",
-  "oneLineSummary": "한 줄 요약 (40자 이내)",
-  "summary": "AI 시황 요약 (150자 이내)",
-  "issues": [
-    {
-      "id": 1,
-      "sentiment": "bullish" | "bearish",
-      "sector": "섹터명",
-      "title": "뉴스 제목",
-      "tickers": ["티커1"],
-      "body": "상세 내용 (100자 이내)"
-    }
-  ],
-  "picks": [
-    {
-      "ticker": "티커",
-      "name": "종목명",
-      "action": "BUY" | "SELL" | "WATCH",
-      "reason": "선택 이유 (80자 이내)"
-    }
-  ],
-  "sectors": [
-    {
-      "name": "섹터명",
-      "score": 0~100,
-      "trend": "▲ +X.X%" | "▼ -X.X%",
-      "note": "한 줄 메모"
-    }
-  ]
+// ── 픽 신호 스타일 ───────────────────────────────────────────────
+function signalStyle(signal) {
+  if (signal === "긍정") return { color: BULL, bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.3)" };
+  if (signal === "부정") return { color: BEAR, bg: "rgba(224,137,104,0.12)", border: "rgba(224,137,104,0.3)" };
+  return { color: NEUTRAL, bg: "rgba(159,179,166,0.10)", border: "rgba(159,179,166,0.25)" };
 }
 
-스크린샷에서 읽을 수 없는 필드는 합리적으로 추론하세요.`
-        }
-      ];
-
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{ role: "user", content }],
-        }),
-      });
-
-      const json = await res.json();
-      const raw = json.content?.find((b) => b.type === "text")?.text || "";
-      const clean = raw.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
-
-      parsed.fetchedAt = new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
-      parsed.indices = parsed.indices || [];
-      parsed.issues  = (parsed.issues  || []).map((item, i) => ({ ...item, id: i + 1, tickers: item.tickers || [] }));
-      parsed.picks   = parsed.picks   || [];
-      parsed.sectors = parsed.sectors || [];
-
-      onResult(parsed);
-      onClose();
-    } catch (e) {
-      setError("분석 중 오류가 발생했습니다.\n" + e.message);
-    } finally {
-      setAnalyzing(false);
-    }
-  };
+// ── 샘플 브리핑 카드 ─────────────────────────────────────────────
+function SampleCard({ brief }) {
+  const [open, setOpen] = useState(false);
+  const isUp = brief.sentiment === "bullish";
+  const sentimentColor = isUp ? BULL : BEAR;
 
   return (
-    <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 90, backdropFilter: "blur(4px)" }} />
-      <div style={{
-        position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
-        width: "100%", maxWidth: 480, zIndex: 100,
-        background: "var(--surface)", borderRadius: "20px 20px 0 0",
-        border: "1px solid var(--line-strong)",
-        animation: "slideUp 0.28s cubic-bezier(.32,1.2,.5,1) both",
-      }}>
-        {/* Handle */}
-        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 4px" }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)" }} />
+    <div style={{
+      background: "#101F18",
+      border: "1px solid rgba(232,239,234,0.08)",
+      borderRadius: 12,
+      padding: "20px",
+      cursor: "pointer",
+      transition: "border-color 0.2s",
+    }}
+    onMouseEnter={(e) => e.currentTarget.style.borderColor = "rgba(52,211,153,0.25)"}
+    onMouseLeave={(e) => e.currentTarget.style.borderColor = "rgba(232,239,234,0.08)"}
+    onClick={() => setOpen(!open)}
+    >
+      {/* 헤더 */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 18 }}>{brief.flag}</span>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#E8EFEA" }}>{brief.label}</div>
+            <div style={{ fontSize: 10, color: "#6B8274" }}>{brief.date}</div>
+          </div>
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{
+            fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 600,
+            background: isUp ? "rgba(52,211,153,0.12)" : "rgba(224,137,104,0.12)",
+            color: sentimentColor,
+            border: `1px solid ${isUp ? "rgba(52,211,153,0.28)" : "rgba(224,137,104,0.28)"}`,
+          }}>
+            {isUp ? "+ 강세" : "− 약세"}
+          </span>
+          <span style={{ fontSize: 12, color: "#6B8274" }}>{open ? "▲" : "▼"}</span>
+        </div>
+      </div>
 
-        <div style={{ padding: "8px 20px 40px" }}>
-          {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>📸 스크린샷으로 업데이트</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", marginTop: 3 }}>
-                뉴스·차트 스크린샷 최대 2장
+      {/* 한 줄 요약 */}
+      <div style={{ fontSize: 14, fontWeight: 600, color: "#E8EFEA", lineHeight: 1.4, marginBottom: 8 }}>
+        {brief.oneLineSummary}
+      </div>
+
+      {/* AI 요약 */}
+      <div style={{ fontSize: 12, color: "#9FB3A6", lineHeight: 1.6 }}>
+        {brief.summary}
+      </div>
+
+      {/* 확장 영역 */}
+      {open && (
+        <div style={{ marginTop: 16, borderTop: "1px solid rgba(232,239,234,0.06)", paddingTop: 16 }}>
+
+          {/* 주요 이슈 */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 10, letterSpacing: "0.1em", color: "#6B8274", marginBottom: 8, textTransform: "uppercase" }}>주요 이슈</div>
+            {brief.issues.map((issue, i) => (
+              <div key={i} style={{ paddingBottom: 10, marginBottom: 10, borderBottom: "1px solid rgba(232,239,234,0.05)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                  <span style={{
+                    fontSize: 9, padding: "1px 6px", borderRadius: 3, fontWeight: 600,
+                    background: issue.sentiment === "bullish" ? "rgba(52,211,153,0.12)" : "rgba(224,137,104,0.12)",
+                    color: issue.sentiment === "bullish" ? BULL : BEAR,
+                    border: `1px solid ${issue.sentiment === "bullish" ? "rgba(52,211,153,0.28)" : "rgba(224,137,104,0.28)"}`,
+                  }}>
+                    {issue.sentiment === "bullish" ? "+ 강세" : "− 약세"}
+                  </span>
+                  <span style={{ fontSize: 9, color: "#6B8274" }}>#{issue.sector}</span>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#E8EFEA", lineHeight: 1.4 }}>{issue.title}</div>
               </div>
-            </div>
-            <div className="tap" onClick={onClose} style={{ fontSize: 18, color: "rgba(255,255,255,0.3)", padding: 4 }}>✕</div>
+            ))}
           </div>
 
-          {/* Upload slots */}
-          <div style={{ display: "flex", gap: 10, marginTop: 16, marginBottom: 16 }}>
-            {[0, 1].map((slot) => {
-              const img = images[slot];
-              return img ? (
-                <div key={slot} style={{ flex: 1, aspectRatio: "9/16", position: "relative", borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.12)" }}>
-                  <img src={img.preview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  <div className="tap" onClick={() => removeImage(slot)} style={{
-                    position: "absolute", top: 6, right: 6,
-                    background: "rgba(0,0,0,0.7)", borderRadius: "50%",
-                    width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 11, color: "#fff",
-                  }}>✕</div>
-                </div>
-              ) : (
-                <div key={slot} className="tap" onClick={() => images.length === slot && inputRef.current?.click()} style={{
-                  flex: 1, aspectRatio: "9/16", borderRadius: 12,
-                  border: `2px dashed ${images.length === slot ? "rgba(52,211,153,0.35)" : "rgba(255,255,255,0.08)"}`,
-                  background: images.length === slot ? "rgba(52,211,153,0.04)" : "rgba(255,255,255,0.02)",
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
-                  opacity: images.length < slot ? 0.35 : 1,
-                  cursor: images.length === slot ? "pointer" : "default",
-                }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={images.length === slot ? handleDrop : undefined}
-                >
-                  <span style={{ fontSize: 28 }}>📷</span>
-                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", textAlign: "center", lineHeight: 1.5 }}>
-                    {images.length === slot ? "탭하여\n업로드" : "2번째\n슬롯"}
+          {/* 오늘의 주목 포인트 */}
+          <div>
+            <div style={{ fontSize: 10, letterSpacing: "0.1em", color: "#6B8274", marginBottom: 8, textTransform: "uppercase" }}>오늘의 주목 포인트</div>
+            {brief.picks.map((pick, i) => {
+              const sig = signalStyle(pick.signal);
+              return (
+                <div key={i} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                  padding: "8px 0", borderBottom: i < brief.picks.length - 1 ? "1px solid rgba(232,239,234,0.05)" : "none",
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#E8EFEA", fontFamily: "monospace" }}>{pick.ticker}</span>
+                      <span style={{ fontSize: 11, color: "#6B8274" }}>{pick.name}</span>
+                    </div>
+                    {pick.reason && (
+                      <div style={{ fontSize: 11, color: "#6B8274", marginTop: 2 }}>{pick.reason}</div>
+                    )}
+                  </div>
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 5,
+                    background: sig.bg, color: sig.color, border: `1px solid ${sig.border}`,
+                    flexShrink: 0, marginLeft: 12,
+                  }}>
+                    {pick.signal}
                   </span>
                 </div>
               );
             })}
           </div>
 
-          <input ref={inputRef} type="file" accept="image/*" multiple style={{ display: "none" }}
-            onChange={(e) => handleFiles(e.target.files)} />
-
-          {/* Tips */}
-          <div style={{ marginBottom: 16, padding: "10px 12px", borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginBottom: 6 }}>💡 잘 되는 스크린샷</div>
-            {["뉴스 앱 헤드라인 목록", "증권사 리포트 요약", "지수·등락률 화면", "텔레그램·카카오 시황 채널"].map((t) => (
-              <div key={t} style={{ fontSize: 10.5, color: "rgba(255,255,255,0.45)", marginBottom: 3 }}>· {t}</div>
-            ))}
+          <div style={{ marginTop: 14, fontSize: 10, color: "#4A6353", lineHeight: 1.6 }}>
+            ※ 본 내용은 투자 권유가 아닌 정보 제공 목적입니다. 투자 판단의 책임은 본인에게 있습니다.
           </div>
-
-          {/* Error */}
-          {error && (
-            <div style={{ marginBottom: 12, fontSize: 11, color: "#E08968", background: "rgba(224,137,104,0.08)", border: "1px solid rgba(224,137,104,0.2)", borderRadius: 8, padding: "10px 12px", whiteSpace: "pre-line" }}>
-              {error}
-            </div>
-          )}
-
-          {/* CTA */}
-          <button
-            onClick={handleAnalyze}
-            disabled={!images.length || analyzing}
-            style={{
-              width: "100%", padding: "14px 0", borderRadius: 12, border: "none", cursor: images.length && !analyzing ? "pointer" : "not-allowed",
-              fontFamily: "inherit", fontSize: 14, fontWeight: 700,
-              background: images.length && !analyzing ? "#34D399" : "rgba(255,255,255,0.07)",
-              color: images.length && !analyzing ? "#0A1510" : "rgba(255,255,255,0.25)",
-              transition: "all 0.2s",
-            }}
-          >
-            {analyzing ? "🤖 AI 분석 중..." : images.length ? `✦ 지금 분석하기 (${images.length}장)` : "스크린샷을 먼저 추가하세요"}
-          </button>
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
-};
+}
 
-// ── MAIN ─────────────────────────────────────────────────────────────────────
-const DATE_OPTIONS = (() => {
-  const opts = [];
-  const today = new Date();
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const label = d.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
-    const value = d.toISOString().slice(0, 10);
-    opts.push({ label, value });
-  }
-  return opts;
-})();
-
-const ASSET_TABS = [
-  { key: "stock",  label: "주식" },
-  { key: "realty", label: "부동산" },
-  { key: "crypto", label: "가상자산" },
-  { key: "frac",   label: "실물자산" },
-];
-
-export default function MarketDaily() {
-  const [assetTab, setAssetTab] = useState("stock");
-  const [stockMarket, setStockMarket] = useState("us"); // 주식 탭 전용 us/kr
-  const market = assetTab === "stock" ? stockMarket : assetTab; // 실제 API market 키
-  const [tab, setTab] = useState("news");
-  const [expanded, setExpanded] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(DATE_OPTIONS[0].value);
-  const [selectedIndex, setSelectedIndex] = useState(null);
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [fetchError, setFetchError] = useState(null);
-
-  // 스켈레톤 4초 이상 지속 시 안내 문구로 전환
-  useEffect(() => {
-    if (!loading) { setLoadingTimeout(false); return; }
-    const t = setTimeout(() => setLoadingTimeout(true), 4000);
-    return () => clearTimeout(t);
-  }, [loading]);
-
-  const fetchData = React.useCallback((isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    setFetchError(null);
-    fetch(`/api/market?market=${market}&date=${selectedDate}`)
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.error) { setFetchError(json.error); setData(null); }
-        else setData(normalizeData(json));
-      })
-      .catch((e) => setFetchError(e.message))
-      .finally(() => { setLoading(false); setRefreshing(false); });
-  }, [market, selectedDate]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const accentColor = "#34D399";
-
-  const switchMarket = (mkt) => { setStockMarket(mkt); setTab("news"); setExpanded(null); };
-
+// ── 메인 페이지 ──────────────────────────────────────────────────
+export default function HomePage() {
   return (
     <>
       <Head>
-        <title>+α | 월급만으론 부족한 우리를 위해</title>
+        <title>Plusalpha — 매일 아침 시장 뉴스레터</title>
+        <meta name="description" content="주식·가상자산·부동산 뉴스를 빠르게 전달해 매일 아침 9시에 이메일로 보내드립니다." />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
-    <div style={{
-      fontFamily: "var(--font-sans)",
-      background: "var(--bg)", minHeight: "100vh",
-      maxWidth: 480, margin: "0 auto", color: "var(--ink)",
-      display: "flex", flexDirection: "column",
-    }}>
-      <style>{`
-        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@1,500&display=swap');
 
-        :root {
-          --bg: #0A1510;
-          --surface: #101F18;
-          --surface-2: #0F1C16;
-          --ink: #E8EFEA;
-          --ink-2: #9FB3A6;
-          --ink-3: #6B8274;
-          --line: rgba(232,239,234,0.08);
-          --line-strong: rgba(232,239,234,0.14);
-          --accent: #34D399;
-          --accent-soft: rgba(52,211,153,0.12);
-          --accent-border: rgba(52,211,153,0.28);
-          --signal-up: #34D399;
-          --signal-down: #E08968;
-          --signal-neutral: #9FB3A6;
-          --font-sans: 'Pretendard Variable', 'Pretendard', system-ui, sans-serif;
-          --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
-          --font-serif: 'Cormorant Garamond', serif;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-          background: var(--bg);
-          font-family: var(--font-sans);
-          color: var(--ink);
-          -webkit-font-smoothing: antialiased;
-          letter-spacing: -0.01em;
-        }
-        ::-webkit-scrollbar { display: none; }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
-        .fade-up { animation: fadeUp .28s ease both; }
-        .tap { cursor: pointer; transition: opacity .1s; }
-        .tap:active { opacity: .6; }
-      `}</style>
-
-      {/* ── HEADER ── */}
-      <div style={{ padding: "16px 16px 0", position: "sticky", top: 0, background: "var(--bg)", zIndex: 50 }}>
-        {/* 1줄: 왼쪽(BI) + 오른쪽(날짜+업데이트) */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          {/* 왼쪽: +α + 태그라인 + BETA */}
-          <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <span style={{ display: "inline-flex", alignItems: "baseline", gap: 1, color: "var(--accent)", flexShrink: 0 }}>
-              <span style={{ fontSize: 13, fontWeight: 500, transform: "translateY(-3px)", display: "inline-block" }}>+</span>
-              <span style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontWeight: 500, fontSize: 24, lineHeight: 1 }}>α</span>
-            </span>
-            <span style={{ fontSize: 9, color: "var(--ink-3)", letterSpacing: -0.005, lineHeight: 1, fontWeight: 500 }}>월급만으론 부족한 우리를 위해</span>
-            <span style={{
-              fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.14em",
-              padding: "2px 6px", borderRadius: 3, flexShrink: 0,
-              background: "transparent",
-              color: "var(--ink-3)",
-              border: "1px solid var(--line)",
-              textTransform: "uppercase",
-            }}>BETA</span>
-          </div>
-          {/* 오른쪽: 날짜 select + 업데이트 시각 */}
-          <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <select
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              style={{
-                background: "var(--surface-2)",
-                border: "1px solid var(--line)",
-                borderRadius: 20, color: "var(--ink-2)",
-                fontFamily: "var(--font-mono)", fontSize: 12,
-                padding: "6px 26px 6px 14px", cursor: "pointer", outline: "none",
-                appearance: "none", WebkitAppearance: "none",
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-                backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
-              }}
-            >
-              {DATE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value} style={{ background: "#0F1C16" }}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* ── 자산 카테고리 탭 ── */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 8, overflowX: "auto" }}>
-          {ASSET_TABS.map((a) => (
-            <button key={a.key} onClick={() => { setAssetTab(a.key); setData(null); setTab("news"); setExpanded(null); }} style={{
-              flexShrink: 0,
-              padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
-              fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: assetTab === a.key ? 600 : 500,
-              letterSpacing: "-0.01em",
-              transition: "all 0.18s",
-              background: assetTab === a.key ? "var(--accent-soft)" : "var(--surface-2)",
-              color: assetTab === a.key ? "var(--accent)" : "var(--ink-3)",
-              border: `1px solid ${assetTab === a.key ? "var(--accent-border)" : "var(--line)"}`,
-            }}>{a.label}</button>
-          ))}
-        </div>
-
-        {/* Market toggle — 주식 탭일 때만 */}
-        {assetTab === "stock" && (
-        <div style={{ display: "flex", gap: 20, marginBottom: 8, paddingLeft: 2 }}>
-          {[{ key: "us", code: "US", ko: "미국" }, { key: "kr", code: "KR", ko: "한국" }].map((m) => {
-            const isActive = market === m.key;
-            return (
-              <button key={m.key} onClick={() => switchMarket(m.key)} style={{
-                display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2,
-                background: "none", border: "none", padding: "4px 0", cursor: "pointer",
-              }}>
-                <span style={{
-                  fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.14em",
-                  fontWeight: 600, color: isActive ? "var(--accent)" : "var(--ink-3)",
-                }}>{m.code}</span>
-                <span style={{
-                  fontSize: 13, fontWeight: isActive ? 600 : 500,
-                  color: isActive ? "var(--ink)" : "var(--ink-2)",
-                  letterSpacing: "-0.01em",
-                }}>{m.ko}</span>
-                <div style={{ height: 1, width: "100%", background: isActive ? "var(--accent)" : "transparent", marginTop: 2 }} />
-              </button>
-            );
-          })}
-        </div>
-        )}
-
-        <>
-        {/* Sentiment + one-liner */}
-        {data && (() => {
-          const noNewsKeywords = ["뉴스 부재", "뉴스 없음", "뉴스 무재", "뉴스 부족", "데이터 부재", "데이터 없음", "데이터 부족", "뉴스 데이터", "수집 실패", "정보 부족", "자료 부족"];
-          const hideOneliner = noNewsKeywords.some(k => data.oneLineSummary?.includes(k));
-          return (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <span style={{
-              fontSize: 10, padding: "3px 10px", borderRadius: 20, fontWeight: 600, flexShrink: 0,
-              background: data.sentiment === "bullish" ? "var(--accent-soft)" : "rgba(224,137,104,0.12)",
-              color: data.sentiment === "bullish" ? "var(--accent)" : "#E08968",
-              border: `1px solid ${data.sentiment === "bullish" ? "var(--accent-border)" : "rgba(224,137,104,0.28)"}`,
-            }}>
-              {data.sentiment === "bullish" ? "+ 강세" : "− 약세"}
-            </span>
-            {!hideOneliner && (
-              <span style={{ fontSize: 11.5, color: "var(--ink-2)", lineHeight: 1.45, letterSpacing: "-0.01em" }}>{data.oneLineSummary}</span>
-            )}
-          </div>
-          );
-        })()}
-
-        {/* Indices */}
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16, paddingBottom: 12 }}>
-          {(data?.indices || []).map((idx) => {
-            const fgNum = idx.name === "Fear & Greed" ? parseFloat(idx.value) : null;
-            const fgLabel = fgNum !== null
-              ? fgNum < 25  ? { text: "극단적 공포", color: "#E08968" }
-              : fgNum < 45  ? { text: "공포",        color: "#9FB3A6" }
-              : fgNum < 55  ? { text: "중립",         color: "var(--ink-3)" }
-              : fgNum < 75  ? { text: "탐욕",         color: "#34D399" }
-              :               { text: "극단적 탐욕",  color: "#34D399" }
-              : null;
-            return (
-              <div key={idx.name} style={{
-                flexShrink: 0, background: "var(--surface)", border: `1px solid ${fgLabel ? fgLabel.color + "33" : "var(--line)"}`,
-                borderRadius: 10, padding: "8px 12px", minWidth: 86,
-                display: "flex", alignItems: "center",
-              }}>
-                <div>
-                  <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.33)", marginBottom: 3 }}>{idx.name}</div>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: idx.up ? BULL : BEAR }}>{idx.value}</div>
-                  {fgLabel && (
-                    <div style={{ fontSize: 9, fontWeight: 600, color: fgLabel.color, marginTop: 3 }}>{fgLabel.text}</div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: "flex", borderBottom: "1px solid var(--line)", marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16 }}>
-          {[{ key: "news", label: "이슈" }, { key: "picks", label: "관심 종목" }, { key: "sectors", label: "섹터" }].map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{
-              flex: 1, background: "none", border: "none", cursor: "pointer",
-              fontFamily: "var(--font-sans)",
-              fontSize: 13, fontWeight: tab === t.key ? 600 : 500, padding: "12px 4px",
-              color: tab === t.key ? "var(--ink)" : "var(--ink-3)",
-              letterSpacing: "-0.01em",
-              position: "relative",
-              borderBottom: `2px solid ${tab === t.key ? "var(--accent)" : "transparent"}`,
-              transition: "all .2s",
-            }}>{t.label}</button>
-          ))}
-        </div>
-        </>
-      </div>
-
-      {/* ── BODY ── */}
-      <div style={{ flex: 1, padding: "14px 16px 40px" }}>
-
-        {/* 로딩 — 스켈레톤 (4초 이내) 또는 안내 문구 (4초 초과) */}
-        {loading && (
-          loadingTimeout ? (
-            <div style={{ textAlign: "center", padding: "72px 24px" }}>
-              <div style={{ fontSize: 36, marginBottom: 16 }}>☕</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.5)", marginBottom: 8, letterSpacing: -0.3 }}>
-                오늘 브리핑을 준비 중이에요
-              </div>
-              <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.28)", lineHeight: 1.7 }}>
-                보통 오전 9시에 업데이트돼요
-              </div>
-            </div>
-          ) : (
-          <div>
-            <style>{`
-              @keyframes shimmer {
-                0% { background-position: -400px 0; }
-                100% { background-position: 400px 0; }
-              }
-              .skeleton {
-                background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
-                background-size: 800px 100%;
-                animation: shimmer 1.4s infinite;
-                border-radius: 8px;
-              }
-            `}</style>
-            {/* Summary skeleton */}
-            <div style={{ borderRadius: 12, border: "1px solid rgba(255,255,255,0.07)", padding: "13px 14px", marginBottom: 16 }}>
-              <div className="skeleton" style={{ height: 10, width: "40%", marginBottom: 12 }} />
-              <div className="skeleton" style={{ height: 12, width: "100%", marginBottom: 7 }} />
-              <div className="skeleton" style={{ height: 12, width: "80%" }} />
-            </div>
-            {/* Card skeletons */}
-            {[1,2,3].map((i) => (
-              <div key={i} style={{ borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", padding: "13px 14px", marginBottom: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-                  <div className="skeleton" style={{ height: 18, width: 52, borderRadius: 4 }} />
-                  <div className="skeleton" style={{ height: 10, width: 60 }} />
-                </div>
-                <div className="skeleton" style={{ height: 13, width: "90%", marginBottom: 6 }} />
-                <div className="skeleton" style={{ height: 13, width: "65%" }} />
-              </div>
-            ))}
-          </div>
-          )
-        )}
-
-        {/* 데이터 없음 / 에러 */}
-        {!loading && (fetchError || !data) && (() => {
-          const isNoData = fetchError === "데이터 없음" || !data;
-          const dow = new Date(selectedDate + "T12:00:00").getDay(); // 0=Sun, 6=Sat
-          const isWeekend = dow === 0 || dow === 6;
-
-          if (!isNoData) {
-            return (
-              <div style={{ textAlign: "center", padding: "60px 20px" }}>
-                <div style={{ fontSize: 12, color: "#E08968" }}>{fetchError}</div>
-              </div>
-            );
-          }
-
-          // 비주식 탭: 준비 중 안내
-          if (assetTab !== "stock") {
-            return (
-              <div style={{ textAlign: "center", padding: "80px 24px" }}>
-                <div style={{ fontSize: 36, marginBottom: 18 }}>🙏</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.55)", marginBottom: 10, letterSpacing: -0.3 }}>
-                  준비 중입니다
-                </div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", lineHeight: 1.9 }}>
-                  곧 업데이트될 예정이에요 🙏
-                </div>
-              </div>
-            );
-          }
-
-          if (isWeekend) {
-            return (
-              <div style={{ textAlign: "center", padding: "72px 24px" }}>
-                <div style={{ fontSize: 40, marginBottom: 18 }}>📵</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 10, letterSpacing: -0.3 }}>
-                  오늘은 마켓이 쉬는 날이에요
-                </div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", lineHeight: 1.9 }}>
-                  주말엔 포지션도 내려놓고 쉬어가세요<br />
-                  +α는 월요일 아침에 깨어있을게요 ☀️
-                </div>
-              </div>
-            );
-          }
-
-          return (
-            <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
-              <div style={{ marginBottom: 12, fontSize: 28 }}>☕</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.45)", marginBottom: 8 }}>
-                아직 오늘 브리핑이 없어요
-              </div>
-              <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.25)", lineHeight: 1.7 }}>
-                보통 장 시작 전 오전 8시 30분,<br />
-                장 마감 후 오후 4시에 발행돼요
-              </div>
-              <div className="tap" onClick={() => fetchData(true)} style={{
-                marginTop: 20, display: "inline-block",
-                fontSize: 11, padding: "7px 18px", borderRadius: 20,
-                border: "1px solid rgba(255,255,255,0.12)",
-                color: "rgba(255,255,255,0.4)", cursor: "pointer",
-              }}>
-                {refreshing ? "확인 중..." : "↻ 다시 확인"}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* 실제 콘텐츠 */}
-        {!loading && data && (<>
-
-        {/* AI 요약 */}
-        <div style={{ marginBottom: 16, borderRadius: 12, border: "1px solid rgba(52,211,153,0.18)", overflow: "hidden" }}>
-          <div style={{ background: "rgba(52,211,153,0.05)", padding: "13px 14px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ fontSize: 10, color: "#34D399", letterSpacing: 1.5, fontWeight: 500 }}>✦ AI 시황 요약</div>
-              <div className="tap" onClick={() => fetchData(true)} style={{ fontSize: 10, color: "var(--ink-3)", background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 5, padding: "3px 9px", cursor: "pointer", opacity: refreshing ? 0.5 : 1, fontFamily: "var(--font-mono)" }}>{refreshing ? "⏳" : "↻"} 최신으로</div>
-            </div>
-            <p style={{ fontSize: 12.5, lineHeight: 1.75, color: "rgba(255,255,255,0.78)" }}>{data.summary}</p>
-            {data.picks?.length > 0 && (
-              <div
-                className="tap"
-                onClick={() => { setTab(tab === "picks" ? "news" : "picks"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                style={{
-                  marginTop: 12, paddingTop: 10,
-                  borderTop: "1px solid rgba(52,211,153,0.15)",
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 11, color: "#34D399", fontWeight: 600 }}>
-                    {tab === "picks" ? "종목 닫기" : "관련 종목 보기"}
-                  </span>
-                  <span style={{
-                    fontSize: 10, fontWeight: 700,
-                    background: "rgba(52,211,153,0.12)", color: "#34D399",
-                    border: "1px solid rgba(52,211,153,0.25)",
-                    borderRadius: 4, padding: "1px 6px",
-                  }}>{data.picks.length}</span>
-                </div>
-                <span style={{
-                  fontSize: 13, color: "#34D399", opacity: 0.7,
-                  display: "inline-block",
-                  transform: tab === "picks" ? "rotate(90deg)" : "rotate(0deg)",
-                  transition: "transform 0.2s ease",
-                }}>→</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 구독 폼 — AI 요약 아래 첫 노출 */}
-        <SubscribeForm />
-
-        {/* 이슈 탭 */}
-        {tab === "news" && (
-          <div className="fade-up">
-            {data.issues.map((item) => (
-              <div key={item.id} className="tap"
-                onClick={() => setExpanded(expanded === item.id ? null : item.id)}
-                style={{
-                  marginBottom: 10, borderRadius: 12,
-                  border: `1px solid ${expanded === item.id ? "var(--line-strong)" : "var(--line)"}`,
-                  background: expanded === item.id ? "var(--surface)" : "rgba(16,31,24,0.6)",
-                }}>
-                <div style={{ padding: "13px 14px 12px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <span style={{
-                      fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 500,
-                      background: item.sentiment === "bullish" ? "var(--accent-soft)" : "rgba(224,137,104,0.12)",
-                      color: sentimentColor(item.sentiment),
-                      border: `1px solid ${item.sentiment === "bullish" ? "var(--accent-border)" : "rgba(224,137,104,0.28)"}`,
-                    }}>
-                      {item.sentiment === "bullish" ? "+ 강세" : "− 약세"}
-                    </span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.22)" }}>#{item.sector}</span>
-                      <span style={{
-                        fontSize: 14, color: "rgba(255,255,255,0.25)",
-                        transform: expanded === item.id ? "rotate(90deg)" : "rotate(0deg)",
-                        transition: "transform 0.2s ease", display: "inline-block",
-                      }}>›</span>
-                    </div>
-                  </div>
-                  <p style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, marginBottom: item.tickers?.length ? 8 : 0 }}>{item.title}</p>
-                  {item.tickers?.length > 0 && (
-                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                      {item.tickers.map((t) => (
-                        <span key={t} style={{ fontSize: 10, color: "var(--ink-3)", background: "var(--surface-2)", borderRadius: 4, padding: "2px 7px", fontFamily: "var(--font-mono)", letterSpacing: "0.04em" }}>
-                          {market === "us" ? "$" : ""}{t}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {expanded === item.id && (
-                  <div className="fade-up" style={{ padding: "0 14px 13px", borderTop: "1px solid var(--line)", paddingTop: 11 }}>
-                    <p style={{ fontSize: 12.5, lineHeight: 1.72, color: "var(--ink-2)" }}>{item.body}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* 종목픽 탭 */}
-        {tab === "picks" && (
-          <div className="fade-up">
-            <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.27)", marginBottom: 14, lineHeight: 1.6 }}>
-              ⚠ AI가 실시간 뉴스 기반으로 선별한 참고용입니다. 투자 판단은 본인 책임입니다.
-            </div>
-            {data.picks.map((pick, i) => {
-              const st = actionStyle(pick.action);
-              return (
-                <div key={`${pick.ticker}-${i}`} style={{ marginBottom: 10, borderRadius: 12, padding: "14px 15px", border: "1px solid var(--line)", background: "var(--surface)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 3, fontFamily: "var(--font-mono)", letterSpacing: "-0.01em" }}>{pick.ticker}</div>
-                      <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{pick.name}</div>
-                    </div>
-                    <div style={{ fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 7, background: st.bg, color: st.color, border: st.border }}>
-                      {pick.action}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.6, borderTop: "1px solid var(--line)", paddingTop: 9 }}>
-                    {pick.reason}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* 섹터 탭 */}
-        {tab === "sectors" && (
-          <div className="fade-up">
-            {/* 헤더 + 범례 */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.45)", letterSpacing: 0.5 }}>섹터 모멘텀</span>
-              <div style={{ display: "flex", gap: 10 }}>
-                {[["#34D399", "상승"], ["#9FB3A6", "보합"], ["#E08968", "하락"]].map(([c, l]) => (
-                  <span key={l} style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ color: c }}>●</span>{l}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* 섹터 카드 목록 */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {data.sectors.map((sec) => {
-                const barColor = sec.score >= 70 ? "#34D399" : sec.score >= 50 ? "#9FB3A6" : "#E08968";
-                const trendUp = sec.trend?.startsWith("▲");
-                const trendDown = sec.trend?.startsWith("▼");
-                const trendColor = trendUp ? "#34D399" : trendDown ? "#E08968" : "#9FB3A6";
-                return (
-                  <div key={sec.name} style={{ padding: "14px 16px", borderRadius: 12, background: "var(--surface)", border: "1px solid var(--line)" }}>
-                    {/* 섹터명 + 트렌드 + 스코어 */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600 }}>{sec.name}</span>
-                        {sec.trend && <span style={{ fontSize: 10.5, color: trendColor, fontWeight: 500 }}>{sec.trend}</span>}
-                      </div>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: barColor }}>{sec.score}</span>
-                    </div>
-                    {/* 스코어 바 */}
-                    <div style={{ height: 4, background: "var(--line)", borderRadius: 2, overflow: "hidden" }}>
-                      <div style={{ width: `${sec.score}%`, height: "100%", borderRadius: 2, background: barColor }} />
-                    </div>
-                    {/* 노트 */}
-                    {sec.note && (
-                      <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.30)", marginTop: 8 }}>{sec.note}</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        </>)}
-      </div>
-
-      {/* 포트폴리오 진단 링크 */}
-      <a href="/portfolio" style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        margin: "4px 16px 32px",
-        padding: "14px 16px",
-        borderRadius: 10,
-        background: "var(--accent-soft)",
-        border: "1px solid var(--accent-border)",
-        textDecoration: "none",
-        color: "var(--accent)",
+      <div style={{
+        minHeight: "100vh",
+        background: "#0A1510",
+        color: "#E8EFEA",
+        fontFamily: "'Pretendard Variable', Pretendard, system-ui, sans-serif",
       }}>
-        <div>
-          <div style={{
-            fontFamily: "var(--font-mono)", fontSize: 9,
-            letterSpacing: "0.16em", textTransform: "uppercase",
-            marginBottom: 3, opacity: 0.7,
-          }}>Diagnosis</div>
-          <div style={{
-            fontSize: 14, fontWeight: 600,
-            color: "var(--ink)", letterSpacing: "-0.01em",
-          }}>포트폴리오 진단</div>
-          <div style={{
-            fontSize: 11, color: "var(--ink-2)", marginTop: 2,
-          }}>내 배분과 목표의 편차를 확인</div>
-        </div>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 16 }}>→</span>
-      </a>
 
-      {/* IndexDetailSheet: 실시간 데이터 연동 전까지 비활성화 */}
-    </div>
-    <AdBanner />
+        {/* ── 네비게이션 ── */}
+        <nav style={{
+          borderBottom: "1px solid rgba(232,239,234,0.06)",
+          padding: "16px 20px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          maxWidth: 600,
+          margin: "0 auto",
+        }}>
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 500, color: BULL }}>+</span>
+            <span style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: 22, color: BULL, lineHeight: 1 }}>α</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL, marginLeft: 6 }}>Plusalpha</span>
+          </div>
+          <div style={{ fontSize: 11, color: "#6B8274" }}>매일 09:00 KST</div>
+        </nav>
+
+        <div style={{ maxWidth: 600, margin: "0 auto", padding: "0 20px 60px" }}>
+
+          {/* ── 히어로 ── */}
+          <div style={{ textAlign: "center", padding: "56px 0 48px" }}>
+            <div style={{
+              display: "inline-block",
+              fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
+              color: BULL, background: "rgba(52,211,153,0.1)",
+              border: "1px solid rgba(52,211,153,0.25)",
+              borderRadius: 20, padding: "4px 12px", marginBottom: 20,
+            }}>
+              무료 · 광고 없음 · 언제든 해지
+            </div>
+
+            <h1 style={{
+              fontSize: 34,
+              fontWeight: 800, letterSpacing: "-0.5px",
+              lineHeight: 1.25, margin: "0 0 16px",
+              color: "#dde1ea",
+            }}>
+              <span style={{ color: "#00e5a0" }}>월급만으로 부족한</span>{" "}우리를 위해
+            </h1>
+
+            <p style={{
+              fontSize: 16, color: "rgba(255,255,255,0.55)", lineHeight: 1.6,
+              margin: "0 0 36px", marginTop: 12, maxWidth: 400, marginLeft: "auto", marginRight: "auto",
+            }}>
+              주식·가상자산·부동산 뉴스를 <span style={{ color: "#00e5a0" }}>빠르게</span> 전달해드려요.
+            </p>
+
+            {/* 구독 폼 */}
+            <div style={{ maxWidth: 400, margin: "0 auto" }}>
+              <SubscribeForm variant="hero" />
+            </div>
+
+            {/* 구독자 수 표시 */}
+            <div style={{ marginTop: 16, fontSize: 11, color: "#6B8274" }}>
+              지금 바로 무료로 시작하세요
+            </div>
+          </div>
+
+          {/* ── 특징 3가지 ── */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 12,
+            marginBottom: 48,
+          }}>
+            {[
+              { icon: "🤖", title: "핵심 요약", desc: "AI가 여러 뉴스를 모아 핵심만 짧게 정리합니다." },
+              { icon: "⏰", title: "매일 09:00", desc: "장 시작 전, 시황을 먼저 파악" },
+              { icon: "📊", title: "4개 시장", desc: "미국·한국 주식, 가상자산, 부동산" },
+            ].map((f) => (
+              <div key={f.title} style={{
+                background: "#101F18",
+                border: "1px solid rgba(232,239,234,0.06)",
+                borderRadius: 10,
+                padding: "16px 14px",
+                textAlign: "center",
+              }}>
+                <div style={{ fontSize: 22, marginBottom: 8 }}>{f.icon}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#E8EFEA", marginBottom: 4 }}>{f.title}</div>
+                <div style={{ fontSize: 11, color: "#6B8274", lineHeight: 1.5 }}>{f.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── 샘플 브리핑 ── */}
+          <div style={{ marginBottom: 48 }}>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: "#6B8274", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
+                Sample Briefing
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#E8EFEA", letterSpacing: -0.3 }}>
+                이런 내용이 매일 도착해요
+              </div>
+              <div style={{ fontSize: 12, color: "#6B8274", marginTop: 4 }}>
+                카드를 눌러 상세 내용을 확인하세요
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {SAMPLE_BRIEFS.map((brief) => (
+                <SampleCard key={brief.key} brief={brief} />
+              ))}
+
+              {/* 나머지 시장 잠금 표시 */}
+              {[
+                { flag: "💎", label: "가상자산", desc: "비트코인·이더리움·알트코인 시황" },
+                { flag: "🏢", label: "부동산", desc: "금리·시세·정책 동향" },
+              ].map((locked) => (
+                <div key={locked.label} style={{
+                  background: "#101F18",
+                  border: "1px solid rgba(232,239,234,0.06)",
+                  borderRadius: 12,
+                  padding: "20px",
+                  opacity: 0.6,
+                  position: "relative",
+                  overflow: "hidden",
+                }}>
+                  <div style={{
+                    position: "absolute", inset: 0,
+                    background: "linear-gradient(to bottom, transparent 30%, #0A1510 100%)",
+                    display: "flex", alignItems: "flex-end", justifyContent: "center",
+                    paddingBottom: 16,
+                  }}>
+                    <div style={{ fontSize: 12, color: BULL, fontWeight: 600 }}>
+                      🔒 구독하면 모든 시장을 받아볼 수 있어요
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 18 }}>{locked.flag}</span>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#E8EFEA" }}>{locked.label}</div>
+                      <div style={{ fontSize: 10, color: "#6B8274" }}>{locked.desc}</div>
+                    </div>
+                  </div>
+                  <div style={{ height: 40, background: "rgba(232,239,234,0.03)", borderRadius: 6 }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── 하단 CTA ── */}
+          <div style={{
+            background: "linear-gradient(135deg, #0F2318 0%, #0A1510 100%)",
+            border: "1px solid rgba(52,211,153,0.15)",
+            borderRadius: 16,
+            padding: "32px 24px",
+            textAlign: "center",
+            marginBottom: 40,
+          }}>
+            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5, marginBottom: 8 }}>
+              월급 그 이상을 위해, 지금 시작하세요
+            </div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", lineHeight: 1.6, marginBottom: 24, textAlign: "center" }}>
+              매일 아침 9시 · 무료 · 광고 없음 · 언제든 해지
+            </div>
+            <div style={{ maxWidth: 380, margin: "0 auto" }}>
+              <SubscribeForm variant="compact" />
+            </div>
+          </div>
+
+          {/* ── 면책 고지 ── */}
+          <div style={{
+            fontSize: 10, color: "#4A6353", lineHeight: 1.7, textAlign: "center",
+          }}>
+            본 서비스는 투자 권유가 아닌 정보 제공 목적입니다.<br />
+            제공된 시황 정보는 AI가 뉴스 헤드라인을 기반으로 생성한 참고 자료이며,<br />
+            투자 판단의 책임은 본인에게 있습니다.
+          </div>
+        </div>
+      </div>
     </>
   );
 }

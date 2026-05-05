@@ -1,8 +1,26 @@
 // pages/api/subscribe.js
 import { supabase } from "../../lib/supabase";
-import { sendWelcomeEmail } from "../../lib/emails/welcome";
+import { sendWelcomeEmail } from "../../lib/emails/welcomeEmail";
+import { logEmail, getKstDateString } from "../../lib/ops/logging";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+async function sendAndLogWelcome({ email, unsubscribeToken }) {
+  const runDate = getKstDateString();
+  try {
+    await sendWelcomeEmail({ email, unsubscribeToken });
+    await logEmail({ emailType: "welcome", recipientEmail: email, runDate, status: "sent" });
+  } catch (err) {
+    console.error("[subscribe] 웰컴 이메일 실패:", err?.message);
+    await logEmail({
+      emailType: "welcome",
+      recipientEmail: email,
+      runDate,
+      status: "failed",
+      errorMessage: err?.message || String(err),
+    });
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -24,7 +42,6 @@ export default async function handler(req, res) {
 
     if (existing) {
       if (existing.is_active) {
-        // 이미 활성 구독 중
         return res.status(200).json({
           success: true,
           isAlreadySubscribed: true,
@@ -37,7 +54,7 @@ export default async function handler(req, res) {
           .update({ is_active: true, subscribed_at: new Date().toISOString() })
           .eq("id", existing.id);
 
-        sendWelcomeEmail({ email: normalizedEmail, unsubscribeToken: existing.unsubscribe_token }).catch(() => {});
+        sendAndLogWelcome({ email: normalizedEmail, unsubscribeToken: existing.unsubscribe_token });
         return res.status(200).json({ success: true, message: "구독이 다시 시작됐어요 ☕" });
       }
     }
@@ -51,9 +68,12 @@ export default async function handler(req, res) {
 
     if (error) throw error;
 
-    sendWelcomeEmail({ email: normalizedEmail, unsubscribeToken: newSub.unsubscribe_token }).catch(() => {});
+    sendAndLogWelcome({ email: normalizedEmail, unsubscribeToken: newSub.unsubscribe_token });
 
-    return res.status(201).json({ success: true, message: "구독 완료! 내일 아침 9시에 첫 브리핑이 도착해요 ☕" });
+    return res.status(201).json({
+      success: true,
+      message: "구독 완료! 내일 아침 9시에 첫 브리핑이 도착해요 ☕",
+    });
 
   } catch (err) {
     console.error("[subscribe] 오류:", err?.message);

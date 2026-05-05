@@ -23,8 +23,12 @@ const toBase64 = (file) => new Promise((res, rej) => {
   img.src = url;
 });
 
-const actionColor = (a) =>
-  a === "BUY" ? "#34d399" : a === "SELL" ? "#ff4d6d" : "#f5c842";
+// signal: 긍정(bullish) / 부정(bearish) / 중립 — 구버전 BUY/SELL/WATCH 호환 포함
+const actionColor = (a) => {
+  if (a === "긍정" || a === "BUY")  return "#34d399";
+  if (a === "부정" || a === "SELL") return "#ff4d6d";
+  return "#f5c842"; // 중립 | WATCH
+};
 
 const BATCH_TIMES = ["09:00", "09:10"];
 

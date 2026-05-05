@@ -12,7 +12,7 @@ const JSON_SCHEMA = `{
     { "id": 1, "sentiment": "bullish", "sector": "섹터명", "title": "뉴스 제목", "tickers": ["티커 또는 종목/자산명"], "body": "상세 내용 (120자 이내)" }
   ],
   "picks": [
-    { "ticker": "티커 또는 자산명", "name": "종목/자산 명칭", "action": "BUY", "reason": "이유 (80자 이내)" }
+    { "ticker": "티커 또는 자산명", "name": "종목/자산 명칭", "signal": "긍정", "reason": "이유 (80자 이내)" }
   ],
   "sectors": [
     { "name": "섹터명", "score": 75, "trend": "▲ +1.2%", "note": "메모" }
@@ -21,7 +21,7 @@ const JSON_SCHEMA = `{
 
 const RULES = `규칙:
 - issues는 가장 많이 보도된 뉴스를 중요도 순으로 최대 5개
-- picks는 BUY/SELL/WATCH 중 하나, 최대 5개 (해당 시장에 맞는 자산/종목으로)
+- picks signal은 "긍정" | "부정" | "중립" 중 하나, 최대 5개 (해당 시장에 맞는 자산/종목으로)
 - sectors는 해당 시장 주요 섹터 기준 최대 8개`;
 
 // Jina AI Reader로 URL → 본문 텍스트 변환 (5초 타임아웃)
