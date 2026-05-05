@@ -3,7 +3,10 @@ import React from "react";
 import Head from "next/head";
 import SubscribeForm from "../components/SubscribeForm";
 import BriefingCard from "../components/BriefingCard";
+import PlusAlphaLogo from "../components/PlusAlphaLogo";
 import { createClient } from "@supabase/supabase-js";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://skstock.vercel.app";
 
 // ── 브랜드 색상 ──────────────────────────────────────────────────
 const BULL = "#34D399";
@@ -132,6 +135,17 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
         <title>Plusalpha — 매일 아침 시장 뉴스레터</title>
         <meta name="description" content="주식·가상자산·부동산 뉴스를 빠르게 전달해 매일 아침 9시에 이메일로 보내드립니다." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* F-10: OG / Twitter 메타 */}
+        <meta property="og:title"       content="Plusalpha — 매일 아침 시장 뉴스레터" />
+        <meta property="og:description" content="주식·가상자산·부동산 시황을 AI가 매일 새벽 정리해 09:00 KST에 이메일로 보내드립니다. 무료 · 광고 없음." />
+        <meta property="og:type"        content="website" />
+        <meta property="og:url"         content={SITE_URL} />
+        <meta property="og:image"       content={`${SITE_URL}/og-image.png`} />
+        <meta name="twitter:card"        content="summary_large_image" />
+        <meta name="twitter:title"       content="Plusalpha — 매일 아침 시장 뉴스레터" />
+        <meta name="twitter:description" content="주식·가상자산·부동산 시황을 AI가 매일 09:00 KST에 정리해 드립니다." />
+        <meta name="twitter:image"       content={`${SITE_URL}/og-image.png`} />
+        <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <div style={{
@@ -151,10 +165,10 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
           maxWidth: 600,
           margin: "0 auto",
         }}>
-          <div>
-            <span style={{ fontSize: 13, fontWeight: 500, color: BULL }}>+</span>
-            <span style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: 22, color: BULL, lineHeight: 1 }}>α</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL, marginLeft: 6 }}>Plusalpha</span>
+          {/* F-10: PlusAlphaLogo 컴포넌트 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <PlusAlphaLogo size={28} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL }}>Plusalpha</span>
           </div>
           <div style={{ fontSize: 11, color: "#6B8274" }}>매일 09:00 KST</div>
         </nav>
@@ -194,9 +208,18 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
               <SubscribeForm variant="default" />
             </div>
 
-            {/* F-01: 마이크로카피 */}
-            <div style={{ marginTop: 12, fontSize: 11, color: "#6B8274", lineHeight: 1.6 }}>
-              평일 09:00 KST · 본문 5분 · 광고 없음 · 1클릭 해지
+            {/* F-05: 발송 메타 칩 라인 */}
+            <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6 }}>
+              {["평일 09:00 KST", "본문 5분", "광고 0", "1클릭 해지"].map((chip) => (
+                <span key={chip} style={{
+                  fontSize: 11, color: "#6B8274",
+                  background: "rgba(107,130,116,0.10)",
+                  border: "1px solid rgba(107,130,116,0.18)",
+                  borderRadius: 20, padding: "3px 10px",
+                }}>
+                  {chip}
+                </span>
+              ))}
             </div>
 
             {/* F-03: AI 출처 한 줄 */}
@@ -253,6 +276,18 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
             </div>
           </div>
 
+          {/* ── F-15: 가입 시 추가 가치 한 줄 ── */}
+          <div style={{
+            marginBottom: 20,
+            padding: "14px 18px",
+            background: "rgba(52,211,153,0.05)",
+            border: "1px solid rgba(52,211,153,0.14)",
+            borderRadius: 10,
+            fontSize: 13, color: "#9FB3A6", lineHeight: 1.6, textAlign: "center",
+          }}>
+            <span style={{ color: "#34D399", fontWeight: 700 }}>가입하면</span> 4개 시장 전체 + 지난 7일치 아카이브 + 관심 종목 알림을 받을 수 있어요.
+          </div>
+
           {/* ── 하단 CTA ── */}
           <div style={{
             background: "linear-gradient(135deg, #0F2318 0%, #0A1510 100%)",
@@ -280,6 +315,26 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
             본 서비스는 투자 권유가 아닌 정보 제공 목적입니다.<br />
             제공된 시황 정보는 AI가 뉴스 헤드라인을 기반으로 생성한 참고 자료이며,<br />
             투자 판단의 책임은 본인에게 있습니다.
+          </div>
+
+          {/* ── F-09: 운영자·문의·정책 footer ── */}
+          <div style={{
+            marginTop: 28,
+            paddingTop: 20,
+            borderTop: "1px solid rgba(232,239,234,0.06)",
+            fontSize: 10, color: "#4A6353", textAlign: "center", lineHeight: 2,
+          }}>
+            운영: Plusalpha &nbsp;·&nbsp;
+            <a href="mailto:jsk65070506@gmail.com" style={{ color: "#4A6353", textDecoration: "underline" }}>
+              문의: jsk65070506@gmail.com
+            </a>
+            &nbsp;·&nbsp;
+            <a href="/privacy" style={{ color: "#4A6353", textDecoration: "underline" }}>개인정보 처리방침</a>
+            &nbsp;·&nbsp;
+            <a href="/terms" style={{ color: "#4A6353", textDecoration: "underline" }}>이용약관</a>
+            <br />
+            {/* 정보통신망법 §50의5 송신자 정보 표시 */}
+            광고성 정보를 원치 않으시면 매 메일 하단 &apos;구독 해지&apos; 링크를 이용해주세요.
           </div>
         </div>
       </div>

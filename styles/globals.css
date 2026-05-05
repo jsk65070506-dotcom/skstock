@@ -35,6 +35,11 @@ a {
   text-decoration: none;
 }
 
+/* F-08: 구독 폼 로딩 스피너 */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;

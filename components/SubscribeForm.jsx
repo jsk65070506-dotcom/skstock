@@ -32,15 +32,17 @@ export default function SubscribeForm({ variant = "default" }) {
         setMessage("이미 구독 중이에요. 감사합니다 :)");
       } else if (data.success) {
         setStatus("success");
-        setMessage("내일 아침 9시부터 Plusalpha가 도착합니다 ☕");
+        // F-08: 성공 마이크로카피
+        setMessage("확인 메일을 보냈어요. 받은편지함(과 스팸함)을 확인해주세요. 메일 안의 링크를 누르면 구독이 시작됩니다.");
         setEmail("");
       } else {
         setStatus("error");
-        setMessage(data.message || "잠시 후 다시 시도해주세요");
+        // F-08: 실패 마이크로카피
+        setMessage(data.message || "잠시 후 다시 시도해주세요. 문제가 계속되면 jsk65070506@gmail.com으로 알려주세요.");
       }
     } catch {
       setStatus("error");
-      setMessage("잠시 후 다시 시도해주세요");
+      setMessage("잠시 후 다시 시도해주세요. 문제가 계속되면 jsk65070506@gmail.com으로 알려주세요.");
     }
   };
 
@@ -94,18 +96,30 @@ export default function SubscribeForm({ variant = "default" }) {
                 fontFamily: "inherit",
               }}
             />
+            {/* F-08: 로딩 시 disabled + 스피너 */}
             <button
               type="submit"
               disabled={status === "loading"}
+              aria-busy={status === "loading"}
               style={{
                 padding: "10px 16px", borderRadius: 8, border: "none",
                 background: status === "loading" ? "rgba(52,211,153,0.4)" : "#34D399",
                 color: "#0A1510", fontSize: 13, fontWeight: 700,
                 cursor: status === "loading" ? "not-allowed" : "pointer",
                 whiteSpace: "nowrap", fontFamily: "inherit", flexShrink: 0,
+                display: "flex", alignItems: "center", gap: 6,
               }}
             >
-              {status === "loading" ? "..." : "무료로 받아보기"}
+              {status === "loading" && (
+                <span style={{
+                  display: "inline-block", width: 12, height: 12,
+                  border: "2px solid rgba(10,21,16,0.3)",
+                  borderTopColor: "#0A1510",
+                  borderRadius: "50%",
+                  animation: "spin 0.7s linear infinite",
+                }} />
+              )}
+              {status === "loading" ? "처리 중" : "무료로 받아보기"}
             </button>
           </div>
 
@@ -113,10 +127,11 @@ export default function SubscribeForm({ variant = "default" }) {
             <div style={{ fontSize: 11, color: "#E08968", marginTop: 6 }}>{message}</div>
           )}
 
+          {/* F-06: 해지 방법 구체화 */}
           <div style={{
             fontSize: 10, color: "#6B8274", marginTop: 8, textAlign: "center",
           }}>
-            매일 아침 9시에 보내드려요. 언제든 해지할 수 있습니다.
+            매 메일 하단의 &apos;구독 해지&apos; 링크 1번 클릭이면 즉시 해지됩니다.
           </div>
         </form>
       )}

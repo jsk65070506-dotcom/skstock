@@ -1,6 +1,7 @@
 // components/BriefingCard.jsx
-// F-13: 카드 4종 구조 통일  F-14: 카드별 정량 신호 1개
+// F-13: 카드 4종 구조 통일  F-14: 카드별 정량 신호 1개  F-04: TrendBadge 사용
 import { useState } from "react";
+import TrendBadge, { sentimentToTrend } from "./TrendBadge";
 
 // ── 브랜드 토큰 (index.jsx와 동일, 신규 추가 없음) ──────────────
 const BULL    = "#34D399";
@@ -78,10 +79,9 @@ function Metric({ label, value, delta }) {
 export default function BriefingCard({ brief }) {
   const [open, setOpen] = useState(false);
 
-  const isUp           = brief.sentiment === "bullish";
-  const sentimentColor = isUp ? BULL : BEAR;
-  const metric         = brief.metric ?? DEFAULT_METRICS[brief.key] ?? null;
-  const sources        = brief.sources ?? ["AI 요약"];
+  const trend   = sentimentToTrend(brief.sentiment);
+  const metric  = brief.metric ?? DEFAULT_METRICS[brief.key] ?? null;
+  const sources = brief.sources ?? ["AI 요약"];
 
   return (
     <div
@@ -107,14 +107,7 @@ export default function BriefingCard({ brief }) {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 600,
-            background: isUp ? "rgba(52,211,153,0.12)" : "rgba(224,137,104,0.12)",
-            color: sentimentColor,
-            border: `1px solid ${isUp ? "rgba(52,211,153,0.28)" : "rgba(224,137,104,0.28)"}`,
-          }}>
-            {isUp ? "+ 강세" : "− 약세"}
-          </span>
+          <TrendBadge trend={trend} />
           <span style={{ fontSize: 12, color: "#6B8274" }}>{open ? "▲" : "▼"}</span>
         </div>
       </div>
@@ -151,14 +144,7 @@ export default function BriefingCard({ brief }) {
               {brief.issues.map((issue, i) => (
                 <div key={i} style={{ paddingBottom: 10, marginBottom: 10, borderBottom: "1px solid rgba(232,239,234,0.05)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                    <span style={{
-                      fontSize: 9, padding: "1px 6px", borderRadius: 3, fontWeight: 600,
-                      background: issue.sentiment === "bullish" ? "rgba(52,211,153,0.12)" : "rgba(224,137,104,0.12)",
-                      color: issue.sentiment === "bullish" ? BULL : BEAR,
-                      border: `1px solid ${issue.sentiment === "bullish" ? "rgba(52,211,153,0.28)" : "rgba(224,137,104,0.28)"}`,
-                    }}>
-                      {issue.sentiment === "bullish" ? "+ 강세" : "− 약세"}
-                    </span>
+                    <TrendBadge trend={sentimentToTrend(issue.sentiment)} />
                     <span style={{ fontSize: 9, color: "#6B8274" }}>#{issue.sector}</span>
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: "#E8EFEA", lineHeight: 1.4 }}>{issue.title}</div>
