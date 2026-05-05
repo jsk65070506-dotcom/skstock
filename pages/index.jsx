@@ -146,6 +146,19 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
         <meta name="twitter:description" content="주식·가상자산·부동산 시황을 AI가 매일 09:00 KST에 정리해 드립니다." />
         <meta name="twitter:image"       content={`${SITE_URL}/og-image.png`} />
         <link rel="icon" href="/favicon.ico" />
+        {/* F-12: 반응형 Hero — 단일 컴포넌트, 미디어쿼리로 분기 */}
+        <style>{`
+          .hero-title { font-size: 28px; }
+          .hero-desc  { font-size: 14px; }
+          .feature-grid { grid-template-columns: repeat(3, 1fr); }
+          @media (min-width: 480px) {
+            .hero-title { font-size: 34px; }
+            .hero-desc  { font-size: 16px; }
+          }
+          @media (max-width: 360px) {
+            .feature-grid { grid-template-columns: 1fr; }
+          }
+        `}</style>
       </Head>
 
       <div style={{
@@ -187,8 +200,7 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
               무료 · 광고 없음 · 언제든 해지
             </div>
 
-            <h1 style={{
-              fontSize: 34,
+            <h1 className="hero-title" style={{
               fontWeight: 800, letterSpacing: "-0.5px",
               lineHeight: 1.25, margin: "0 0 16px",
               color: "#dde1ea",
@@ -196,8 +208,8 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
               <span style={{ color: "#00e5a0" }}>월급만으로 부족한</span>{" "}우리를 위해
             </h1>
 
-            <p style={{
-              fontSize: 16, color: "rgba(255,255,255,0.55)", lineHeight: 1.6,
+            <p className="hero-desc" style={{
+              color: "rgba(255,255,255,0.55)", lineHeight: 1.6,
               margin: "0 0 36px", marginTop: 12, maxWidth: 400, marginLeft: "auto", marginRight: "auto",
             }}>
               주식·가상자산·부동산 뉴스를 <span style={{ color: "#00e5a0" }}>빠르게</span> 전달해드려요.
@@ -229,9 +241,8 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
           </div>
 
           {/* ── 특징 3가지 ── */}
-          <div style={{
+          <div className="feature-grid" style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
             gap: 12,
             marginBottom: 48,
           }}>
