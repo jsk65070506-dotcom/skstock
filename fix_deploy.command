@@ -15,7 +15,7 @@ git log --oneline -3
 
 echo ""
 echo "=== Vercel 배포 시작 ==="
-npx --yes vercel --prod --yes
+npx --yes vercel --prod --yes --no-wait && echo "배포 요청 완료 — Vercel 대시보드에서 진행상황 확인하세요"
 
 echo ""
 echo "=== 배포 완료 ==="
