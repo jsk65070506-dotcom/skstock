@@ -57,8 +57,8 @@ const ALL_MARKETS = [
   {
     key: "realty",
     batch: "b",
-    label: "한국 부동산 시장",
-    queries: ["한국 부동산 뉴스", "아파트 시세", "부동산 금리"],
+    label: "실물자산 시장 (조각투자·STO)",
+    queries: ["조각투자 뉴스", "STO 증권형토큰", "음악 조각투자", "한우 조각투자", "건물 조각투자"],
   },
 ];
 

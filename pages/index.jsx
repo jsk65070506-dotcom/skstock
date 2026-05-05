@@ -60,6 +60,42 @@ function getSampleBriefs(dateLabel) {
         { ticker: "373220", name: "LG에너지솔루션", signal: "부정", reason: "미국 IRA 세액공제 불확실성 지속" },
       ],
     },
+    {
+      key: "crypto",
+      label: "가상자산",
+      flag: "💎",
+      sentiment: "bullish",
+      date: dateLabel,
+      oneLineSummary: "비트코인 9만 달러 돌파 시도, ETF 자금 유입 지속",
+      summary: "미국 현물 ETF 순유입이 이어지며 BTC 9만 달러 저항선 재도전. 이더리움도 동반 강세를 보이며 알트코인 전반 상승.",
+      issues: [
+        { title: "BTC 현물 ETF 3일 연속 순유입 — 5억 달러 돌파", sentiment: "bullish", sector: "ETF" },
+        { title: "이더리움 Pectra 업그레이드 일정 확정", sentiment: "bullish", sector: "이더리움" },
+        { title: "SEC, 알트코인 규제 가이드라인 발표 예고", sentiment: "bearish", sector: "규제" },
+      ],
+      picks: [
+        { ticker: "BTC", name: "비트코인", signal: "긍정", reason: "ETF 수요 + 반감기 후 공급 감소 효과" },
+        { ticker: "ETH", name: "이더리움", signal: "긍정", reason: "Pectra 업그레이드 호재 + 스테이킹 수요" },
+      ],
+    },
+    {
+      key: "realty",
+      label: "실물자산",
+      flag: "🏢",
+      sentiment: "bullish",
+      date: dateLabel,
+      oneLineSummary: "조각투자·STO 시장 성장세, 음악·한우·건물 신규 공모 주목",
+      summary: "금리 인하 기대감과 함께 실물자산 조각투자 플랫폼 거래량 증가. STO 법제화 논의 본격화로 기관 참여 확대 전망.",
+      issues: [
+        { title: "뮤직카우, 음악 저작권 조각투자 신규 공모 오픈", sentiment: "bullish", sector: "음악조각투자" },
+        { title: "한우 조각투자 플랫폼 거래량 전월 대비 30% 증가", sentiment: "bullish", sector: "한우조각투자" },
+        { title: "STO 법제화 논의 — 금융위 가이드라인 하반기 발표 예정", sentiment: "bullish", sector: "STO" },
+      ],
+      picks: [
+        { ticker: "뮤직카우", name: "음악 저작권", signal: "긍정", reason: "신규 공모 흥행 + 월정액 수익 안정성" },
+        { ticker: "카사", name: "건물 조각투자", signal: "중립", reason: "공실률 리스크 vs 임대 수익 기대" },
+      ],
+    },
   ];
 }
 
