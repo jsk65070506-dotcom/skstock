@@ -2,52 +2,88 @@
 import React, { useState } from "react";
 import Head from "next/head";
 import SubscribeForm from "../components/SubscribeForm";
+import { createClient } from "@supabase/supabase-js";
 
 // ── 브랜드 색상 ──────────────────────────────────────────────────
 const BULL = "#34D399";
 const BEAR = "#E08968";
 const NEUTRAL = "#9FB3A6";
 
-// ── 샘플 브리핑 데이터 ──────────────────────────────────────────
-const SAMPLE_BRIEFS = [
-  {
-    key: "us",
-    label: "미국 주식",
-    flag: "🇺🇸",
-    sentiment: "bullish",
-    date: "5월 4일",
-    oneLineSummary: "연준 동결 시사에 기술주 반등, S&P 500 사흘 만에 상승 전환",
-    summary: "파월 의장의 추가 인상 자제 발언이 시장을 안심시키며 빅테크 중심으로 매수세 유입. 나스닥 +1.4% 마감.",
-    issues: [
-      { title: "파월 '추가 인상 서두르지 않겠다' 발언", sentiment: "bullish", sector: "매크로" },
-      { title: "애플·MS 실적 예상치 상회 — 클라우드 부문 강세", sentiment: "bullish", sector: "빅테크" },
-      { title: "지역은행 예금 이탈 우려 재부상", sentiment: "bearish", sector: "금융" },
-    ],
-    picks: [
-      { ticker: "NVDA", name: "엔비디아", signal: "긍정", reason: "AI 칩 수요 지속 + 데이터센터 성장" },
-      { ticker: "MSFT", name: "마이크로소프트", signal: "긍정", reason: "애저 클라우드 성장률 회복" },
-      { ticker: "KRE", name: "지역은행 ETF", signal: "부정", reason: "예금 이탈 + 상업용 부동산 리스크" },
-    ],
-  },
-  {
-    key: "kr",
-    label: "한국 주식",
-    flag: "🇰🇷",
-    sentiment: "bearish",
-    date: "5월 4일",
-    oneLineSummary: "외국인 순매도 확대, 코스피 2,640선 하회 마감",
-    summary: "원화 약세와 글로벌 달러 강세가 겹치며 외국인이 코스피를 3거래일 연속 순매도. 반도체·2차전지 동반 하락.",
-    issues: [
-      { title: "외국인 코스피 3거래일 연속 순매도 — 5,800억 이탈", sentiment: "bearish", sector: "수급" },
-      { title: "원달러 환율 1,370원대 — 수입물가 부담 확대", sentiment: "bearish", sector: "환율" },
-      { title: "삼성전자 HBM 공급 확대 협상 긍정 신호", sentiment: "bullish", sector: "반도체" },
-    ],
-    picks: [
-      { ticker: "005930", name: "삼성전자", signal: "중립", reason: "HBM 수혜 기대 vs 단기 수급 부담" },
-      { ticker: "373220", name: "LG에너지솔루션", signal: "부정", reason: "미국 IRA 세액공제 불확실성 지속" },
-    ],
-  },
-];
+// ── KST 날짜 유틸 ──────────────────────────────────────────────
+function getKstDateString() {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+
+function formatDateLabel(dateStr) {
+  const [, m, d] = dateStr.split("-").map(Number);
+  return `${m}월 ${d}일`;
+}
+
+// ── 샘플 브리핑 (Supabase 데이터 없을 때 fallback) ──────────────
+function getSampleBriefs(dateLabel) {
+  return [
+    {
+      key: "us",
+      label: "미국 주식",
+      flag: "🇺🇸",
+      sentiment: "bullish",
+      date: dateLabel,
+      oneLineSummary: "연준 동결 시사에 기술주 반등, S&P 500 사흘 만에 상승 전환",
+      summary: "파월 의장의 추가 인상 자제 발언이 시장을 안심시키며 빅테크 중심으로 매수세 유입. 나스닥 +1.4% 마감.",
+      issues: [
+        { title: "파월 '추가 인상 서두르지 않겠다' 발언", sentiment: "bullish", sector: "매크로" },
+        { title: "애플·MS 실적 예상치 상회 — 클라우드 부문 강세", sentiment: "bullish", sector: "빅테크" },
+        { title: "지역은행 예금 이탈 우려 재부상", sentiment: "bearish", sector: "금융" },
+      ],
+      picks: [
+        { ticker: "NVDA", name: "엔비디아", signal: "긍정", reason: "AI 칩 수요 지속 + 데이터센터 성장" },
+        { ticker: "MSFT", name: "마이크로소프트", signal: "긍정", reason: "애저 클라우드 성장률 회복" },
+        { ticker: "KRE", name: "지역은행 ETF", signal: "부정", reason: "예금 이탈 + 상업용 부동산 리스크" },
+      ],
+    },
+    {
+      key: "kr",
+      label: "한국 주식",
+      flag: "🇰🇷",
+      sentiment: "bearish",
+      date: dateLabel,
+      oneLineSummary: "외국인 순매도 확대, 코스피 2,640선 하회 마감",
+      summary: "원화 약세와 글로벌 달러 강세가 겹치며 외국인이 코스피를 3거래일 연속 순매도. 반도체·2차전지 동반 하락.",
+      issues: [
+        { title: "외국인 코스피 3거래일 연속 순매도 — 5,800억 이탈", sentiment: "bearish", sector: "수급" },
+        { title: "원달러 환율 1,370원대 — 수입물가 부담 확대", sentiment: "bearish", sector: "환율" },
+        { title: "삼성전자 HBM 공급 확대 협상 긍정 신호", sentiment: "bullish", sector: "반도체" },
+      ],
+      picks: [
+        { ticker: "005930", name: "삼성전자", signal: "중립", reason: "HBM 수혜 기대 vs 단기 수급 부담" },
+        { ticker: "373220", name: "LG에너지솔루션", signal: "부정", reason: "미국 IRA 세액공제 불확실성 지속" },
+      ],
+    },
+  ];
+}
+
+// ── Supabase 데이터 → 카드 포맷 변환 ───────────────────────────
+function rowToBrief(row, dateLabel) {
+  const META = {
+    us:     { label: "미국 주식",  flag: "🇺🇸" },
+    kr:     { label: "한국 주식",  flag: "🇰🇷" },
+    crypto: { label: "가상자산",   flag: "💎" },
+    realty: { label: "실물자산",   flag: "🏢" },
+  };
+  const m = META[row.market] || { label: row.market, flag: "📊" };
+  return {
+    key: row.market,
+    label: m.label,
+    flag: m.flag,
+    sentiment: row.sentiment,
+    date: dateLabel,
+    oneLineSummary: row.one_line_summary || "",
+    summary: row.summary || "",
+    issues: Array.isArray(row.issues) ? row.issues : [],
+    picks: Array.isArray(row.picks) ? row.picks : [],
+  };
+}
 
 // ── 픽 신호 스타일 ───────────────────────────────────────────────
 function signalStyle(signal) {
@@ -173,7 +209,7 @@ function SampleCard({ brief }) {
 }
 
 // ── 메인 페이지 ──────────────────────────────────────────────────
-export default function HomePage() {
+export default function HomePage({ briefs, dateLabel, isLive }) {
   return (
     <>
       <Head>
@@ -274,14 +310,14 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* ── 샘플 브리핑 ── */}
+          {/* ── 브리핑 카드 ── */}
           <div style={{ marginBottom: 48 }}>
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 11, color: "#6B8274", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
-                Sample Briefing
+                {isLive ? "Today's Briefing" : "Sample Briefing"}
               </div>
               <div style={{ fontSize: 18, fontWeight: 700, color: "#E8EFEA", letterSpacing: -0.3 }}>
-                이런 내용이 매일 도착해요
+                {isLive ? `${dateLabel} 오늘의 뉴스` : "이런 내용이 매일 도착해요"}
               </div>
               <div style={{ fontSize: 12, color: "#6B8274", marginTop: 4 }}>
                 카드를 눌러 상세 내용을 확인하세요
@@ -289,43 +325,8 @@ export default function HomePage() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {SAMPLE_BRIEFS.map((brief) => (
+              {briefs.map((brief) => (
                 <SampleCard key={brief.key} brief={brief} />
-              ))}
-
-              {/* 나머지 시장 잠금 표시 */}
-              {[
-                { flag: "💎", label: "가상자산", desc: "비트코인·이더리움·알트코인 시황" },
-                { flag: "🏢", label: "부동산", desc: "금리·시세·정책 동향" },
-              ].map((locked) => (
-                <div key={locked.label} style={{
-                  background: "#101F18",
-                  border: "1px solid rgba(232,239,234,0.06)",
-                  borderRadius: 12,
-                  padding: "20px",
-                  opacity: 0.6,
-                  position: "relative",
-                  overflow: "hidden",
-                }}>
-                  <div style={{
-                    position: "absolute", inset: 0,
-                    background: "linear-gradient(to bottom, transparent 30%, #0A1510 100%)",
-                    display: "flex", alignItems: "flex-end", justifyContent: "center",
-                    paddingBottom: 16,
-                  }}>
-                    <div style={{ fontSize: 12, color: BULL, fontWeight: 600 }}>
-                      🔒 구독하면 모든 시장을 받아볼 수 있어요
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 18 }}>{locked.flag}</span>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#E8EFEA" }}>{locked.label}</div>
-                      <div style={{ fontSize: 10, color: "#6B8274" }}>{locked.desc}</div>
-                    </div>
-                  </div>
-                  <div style={{ height: 40, background: "rgba(232,239,234,0.03)", borderRadius: 6 }} />
-                </div>
               ))}
             </div>
           </div>
@@ -362,4 +363,51 @@ export default function HomePage() {
       </div>
     </>
   );
+}
+
+// ── 서버사이드 데이터 패칭 ────────────────────────────────────────
+export async function getServerSideProps() {
+  const dateStr = getKstDateString();
+  const dateLabel = formatDateLabel(dateStr);
+
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    );
+
+    const MARKETS = ["us", "kr", "crypto", "realty"];
+
+    const { data: rows } = await supabase
+      .from("market_briefings")
+      .select("market, sentiment, one_line_summary, summary, issues, picks")
+      .eq("date", dateStr)
+      .in("market", MARKETS)
+      .order("batch_time", { ascending: false });
+
+    // 시장별 최신 1개씩만 추출
+    const seen = new Set();
+    const deduped = [];
+    for (const row of (rows || [])) {
+      if (!seen.has(row.market)) {
+        seen.add(row.market);
+        deduped.push(row);
+      }
+    }
+
+    // 원하는 순서로 정렬
+    const ordered = MARKETS
+      .map(m => deduped.find(r => r.market === m))
+      .filter(Boolean)
+      .map(row => rowToBrief(row, dateLabel));
+
+    if (ordered.length > 0) {
+      return { props: { briefs: ordered, dateLabel, isLive: true } };
+    }
+  } catch (e) {
+    console.error("[index] getServerSideProps 오류:", e?.message);
+  }
+
+  // 데이터 없으면 샘플 fallback
+  return { props: { briefs: getSampleBriefs(dateLabel), dateLabel, isLive: false } };
 }
