@@ -103,37 +103,79 @@ function getSampleBriefs(dateLabel) {
   ];
 }
 
-// ── 실시간 시장 지표 조회 (Yahoo Finance) ────────────────────────
+// ── 실시간 시장 지표 조회 ────────────────────────────────────────
+// BTC: CoinGecko (무인증, Vercel 허용)
+// S&P500/KOSPI: Stooq CSV (무인증)
 async function fetchLivePrices() {
-  const SYMBOLS = {
-    us:     { symbol: "^GSPC",   label: "S&P 500",  format: (p) => p.toLocaleString("en-US", { maximumFractionDigits: 2 }) },
-    kr:     { symbol: "^KS11",   label: "KOSPI",    format: (p) => p.toLocaleString("ko-KR", { maximumFractionDigits: 2 }) },
-    crypto: { symbol: "BTC-USD", label: "BTC",      format: (p) => "$" + Math.round(p).toLocaleString("en-US") },
-  };
-
   const metrics = {};
-  await Promise.all(
-    Object.entries(SYMBOLS).map(async ([market, { symbol, label, format }]) => {
-      try {
-        const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`;
-        const res = await fetch(url, {
-          headers: { "User-Agent": "Mozilla/5.0 (compatible; PlusAlpha/1.0)" },
-          signal: AbortSignal.timeout(5000),
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        const q = data.quoteResponse?.result?.[0];
-        if (!q) return;
-        const price = q.regularMarketPrice;
-        const change = q.regularMarketChangePercent;
-        metrics[market] = {
-          label,
-          value: format(price),
+
+  // BTC — CoinGecko
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true",
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const price  = data?.bitcoin?.usd;
+      const change = data?.bitcoin?.usd_24h_change;
+      if (price) {
+        metrics.crypto = {
+          label: "BTC",
+          value: "$" + Math.round(price).toLocaleString("en-US"),
           delta: (change >= 0 ? "+" : "") + change.toFixed(2) + "%",
         };
-      } catch { /* 실패 시 무시 → DEFAULT_METRICS 사용 */ }
-    })
-  );
+      }
+    }
+  } catch { /* fallback */ }
+
+  // S&P 500 — Stooq
+  try {
+    const res = await fetch(
+      "https://stooq.com/q/l/?s=^spx&f=sd2t2ohlcv&h&e=csv",
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (res.ok) {
+      const text = await res.text();
+      const lines = text.trim().split("\n");
+      const cols  = lines[1]?.split(",");
+      // Symbol,Date,Time,Open,High,Low,Close,Volume
+      const close = parseFloat(cols?.[6]);
+      const open  = parseFloat(cols?.[3]);
+      if (close && open) {
+        const changePct = ((close - open) / open) * 100;
+        metrics.us = {
+          label: "S&P 500",
+          value: close.toLocaleString("en-US", { maximumFractionDigits: 2 }),
+          delta: (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%",
+        };
+      }
+    }
+  } catch { /* fallback */ }
+
+  // KOSPI — Stooq
+  try {
+    const res = await fetch(
+      "https://stooq.com/q/l/?s=^kospi&f=sd2t2ohlcv&h&e=csv",
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (res.ok) {
+      const text = await res.text();
+      const lines = text.trim().split("\n");
+      const cols  = lines[1]?.split(",");
+      const close = parseFloat(cols?.[6]);
+      const open  = parseFloat(cols?.[3]);
+      if (close && open) {
+        const changePct = ((close - open) / open) * 100;
+        metrics.kr = {
+          label: "KOSPI",
+          value: close.toLocaleString("ko-KR", { maximumFractionDigits: 2 }),
+          delta: (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%",
+        };
+      }
+    }
+  } catch { /* fallback */ }
+
   return metrics;
 }
 
