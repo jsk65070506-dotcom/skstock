@@ -103,8 +103,42 @@ function getSampleBriefs(dateLabel) {
   ];
 }
 
+// ── 실시간 시장 지표 조회 (Yahoo Finance) ────────────────────────
+async function fetchLivePrices() {
+  const SYMBOLS = {
+    us:     { symbol: "^GSPC",   label: "S&P 500",  format: (p) => p.toLocaleString("en-US", { maximumFractionDigits: 2 }) },
+    kr:     { symbol: "^KS11",   label: "KOSPI",    format: (p) => p.toLocaleString("ko-KR", { maximumFractionDigits: 2 }) },
+    crypto: { symbol: "BTC-USD", label: "BTC",      format: (p) => "$" + Math.round(p).toLocaleString("en-US") },
+  };
+
+  const metrics = {};
+  await Promise.all(
+    Object.entries(SYMBOLS).map(async ([market, { symbol, label, format }]) => {
+      try {
+        const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`;
+        const res = await fetch(url, {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; PlusAlpha/1.0)" },
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const q = data.quoteResponse?.result?.[0];
+        if (!q) return;
+        const price = q.regularMarketPrice;
+        const change = q.regularMarketChangePercent;
+        metrics[market] = {
+          label,
+          value: format(price),
+          delta: (change >= 0 ? "+" : "") + change.toFixed(2) + "%",
+        };
+      } catch { /* 실패 시 무시 → DEFAULT_METRICS 사용 */ }
+    })
+  );
+  return metrics;
+}
+
 // ── Supabase 데이터 → 카드 포맷 변환 ───────────────────────────
-function rowToBrief(row, dateLabel) {
+function rowToBrief(row, dateLabel, metric) {
   const META = {
     us:     { label: "미국 주식",  flag: "🇺🇸" },
     kr:     { label: "한국 주식",  flag: "🇰🇷" },
@@ -122,6 +156,7 @@ function rowToBrief(row, dateLabel) {
     summary: row.summary || "",
     issues: Array.isArray(row.issues) ? row.issues : [],
     picks: Array.isArray(row.picks) ? row.picks : [],
+    ...(metric ? { metric } : {}),
   };
 }
 
@@ -358,6 +393,9 @@ export async function getServerSideProps() {
   const dateStr = getKstDateString();
   const dateLabel = formatDateLabel(dateStr);
 
+  // 실시간 가격 병렬 조회
+  const liveMetrics = await fetchLivePrices();
+
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -387,7 +425,7 @@ export async function getServerSideProps() {
     const ordered = MARKETS
       .map(m => deduped.find(r => r.market === m))
       .filter(Boolean)
-      .map(row => rowToBrief(row, dateLabel));
+      .map(row => rowToBrief(row, dateLabel, liveMetrics[row.market] ?? null));
 
     if (ordered.length > 0) {
       return { props: { briefs: ordered, dateLabel, isLive: true } };
@@ -396,6 +434,6 @@ export async function getServerSideProps() {
     console.error("[index] getServerSideProps 오류:", e?.message);
   }
 
-  // 데이터 없으면 샘플 fallback
-  return { props: { briefs: getSampleBriefs(dateLabel), dateLabel, isLive: false } };
+  // 데이터 없으면 샘플 fallback (실시간 지표는 그대로 전달)
+  return { props: { briefs: getSampleBriefs(dateLabel).map(b => ({ ...b, ...(liveMetrics[b.key] ? { metric: liveMetrics[b.key] } : {}) })), dateLabel, isLive: false } };
 }
