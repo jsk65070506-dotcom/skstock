@@ -133,28 +133,38 @@ async function processMarket(market, date) {
     }
   }
 
-  if (allItems.length === 0) throw new Error(`뉴스 수집 실패: ${market.key}`);
+  // 뉴스가 없으면 AI 자체 지식으로 분석 (fallback)
+  const useAiFallback = allItems.length === 0;
 
-  // 키워드 빈도 분석
-  const wordCount = {};
-  for (const item of allItems) {
-    item.title.split(/\s+/).forEach((w) => {
-      const word = w.replace(/[^가-힣a-zA-Z0-9]/g, "");
-      if (word.length > 1) wordCount[word] = (wordCount[word] || 0) + 1;
-    });
-  }
-  const topWords = Object.entries(wordCount)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([w]) => w);
+  let prompt;
+  if (useAiFallback) {
+    prompt = `오늘 날짜는 ${date}입니다. 뉴스 수집에 실패했으므로 ${market.label}의 최근 일반적 시황 흐름을 AI 지식 기반으로 분석해 주세요.
+실제 오늘 뉴스 없이 최근 트렌드·구조적 이슈 중심으로 작성하되, picks의 reason에 "(AI 추정)" 문구를 붙여주세요.
 
-  const headlines = allItems
-    .slice(0, 10)
-    .map((item) => `- ${item.title}`)
-    .join("\n");
+아래 JSON 스키마에 맞게 분석하세요:
+${JSON_SCHEMA}
 
-  // 2. Claude API 호출
-  const prompt = `다음은 ${date} ${market.label} 관련 뉴스 헤드라인입니다.
+${RULES}`;
+  } else {
+    // 키워드 빈도 분석
+    const wordCount = {};
+    for (const item of allItems) {
+      item.title.split(/\s+/).forEach((w) => {
+        const word = w.replace(/[^가-힣a-zA-Z0-9]/g, "");
+        if (word.length > 1) wordCount[word] = (wordCount[word] || 0) + 1;
+      });
+    }
+    const topWords = Object.entries(wordCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([w]) => w);
+
+    const headlines = allItems
+      .slice(0, 10)
+      .map((item) => `- ${item.title}`)
+      .join("\n");
+
+    prompt = `다음은 ${date} ${market.label} 관련 뉴스 헤드라인입니다.
 
 ${headlines}
 
@@ -164,6 +174,9 @@ ${headlines}
 ${JSON_SCHEMA}
 
 ${RULES}`;
+  }
+
+  // 2. Claude API 호출
 
   const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -216,7 +229,7 @@ ${RULES}`;
 
   if (error) throw new Error(`Supabase 저장 실패 (${market.key}): ${error.message}`);
 
-  return { key: market.key, ok: true, headlinesUsed: allItems.length, data: parsed };
+  return { key: market.key, ok: true, headlinesUsed: allItems.length, aiFallback: useAiFallback, data: parsed };
 }
 
 // ── 텔레그램 알림 ────────────────────────────────────────────────
