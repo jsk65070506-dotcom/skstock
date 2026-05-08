@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) return res.status(500).json({ error: "RESEND_API_KEY 미설정" });
 
-  const to = process.env.ADMIN_EMAIL || "jsk65070506@gmail.com";
+  const to = req.query.to || process.env.ADMIN_EMAIL || "jsk65070506@gmail.com";
   const { date, us, kr, crypto, realestate, keywords } = SAMPLE_DATA;
   const [, m, d] = date.split("-").map(Number);
 
