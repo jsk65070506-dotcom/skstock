@@ -420,58 +420,15 @@ export default async function handler(req, res) {
   await sendTelegramBrief({ date, batch, summary }).catch(() => {});
   await sendAdminEmail({ date, batch, summary }).catch(() => {});
 
-  // 데일리 통합 브리핑 발송 (4줄 요약 이메일)
-  ;(async () => {
-    try {
-      const result = await sendDailyBriefing();
-      if (!result.skipped) {
-        console.log(`[auto-brief] 데일리 브리핑 발송: ${result.sent}명 성공, ${result.failed}명 실패`);
-      }
-    } catch (e) {
-      console.error("[auto-brief] 데일리 브리핑 발송 오류:", e?.message);
+  // 데일리 통합 브리핑 발송 (4줄 요약 이메일) — await 으로 응답 전에 완료 보장
+  try {
+    const result = await sendDailyBriefing();
+    if (!result.skipped) {
+      console.log(`[auto-brief] 데일리 브리핑 발송: ${result.sent}명 성공, ${result.failed}명 실패`);
     }
-  })();
-
-  // 구독자 이메일 발송 (Promise.allSettled — 실패해도 다음 시장 계속)
-  ;(async () => {
-    try {
-      const { data: subs } = await supabase
-        .from("subscribers")
-        .select("email, unsubscribe_token, preferences")
-        .eq("is_active", true);
-
-      if (!subs?.length) return;
-
-      const sendTasks = summary
-        .filter((r) => r.status === "ok" && r.data)
-        .map(async (result) => {
-          const marketKey = result.market;
-          const prefKey = marketKey === "realty" ? "realestate" : marketKey;
-          const filtered = subs.filter((s) => {
-            const prefs = s.preferences || {};
-            return prefs[prefKey] !== false;
-          });
-          if (!filtered.length) return;
-
-          const { sent, failed } = await sendBriefToSubscribers({
-            date,
-            market: marketKey,
-            data: result.data,
-            subscribers: filtered,
-          });
-          console.log(`[auto-brief] 구독자 발송 ${marketKey}: ${sent}명 성공, ${failed}명 실패`);
-        });
-
-      const results = await Promise.allSettled(sendTasks);
-      results.forEach((r, i) => {
-        if (r.status === "rejected") {
-          console.error(`[auto-brief] 구독자 발송 오류 (task ${i}):`, r.reason?.message);
-        }
-      });
-    } catch (e) {
-      console.error("[auto-brief] 구독자 발송 오류:", e?.message);
-    }
-  })();
+  } catch (e) {
+    console.error("[auto-brief] 데일리 브리핑 발송 오류:", e?.message);
+  }
 
   return res.status(200).json({
     date,
