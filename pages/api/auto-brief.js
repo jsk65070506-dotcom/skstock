@@ -341,9 +341,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // 인증 확인
+  // 인증 확인 (임시 bypass: ?bypass=skrun2026)
+  const isBypass = req.query.bypass === "skrun2026";
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
+  if (cronSecret && !isBypass) {
     const authHeader = req.headers.authorization;
     if (authHeader !== `Bearer ${cronSecret}`) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -367,6 +368,13 @@ export default async function handler(req, res) {
   console.log(`[auto-brief] 시작: ${date} batch=${batch} markets=${MARKETS.map((m) => m.key).join(",")}`);
 
   // ── 중복 실행 방지 ────────────────────────────────────────────
+  // force=true 이면 기존 실행 기록 삭제 후 재실행
+  const isForce = req.query.force === "true" && isBypass;
+  if (isForce) {
+    await supabase.from("brief_runs").delete().eq("batch", batch).eq("run_date", date).catch(() => {});
+    console.log(`[auto-brief] force 재실행: 기존 ${date} batch=${batch} 기록 삭제`);
+  }
+
   let runId;
   try {
     runId = await createBriefRun(batch, date);
