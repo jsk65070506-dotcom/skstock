@@ -40,16 +40,25 @@ const MARKET_CONFIGS = {
 async function fetchGoogleNewsRSS(query) {
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+        "Accept": "application/rss+xml, application/xml, text/xml, */*",
+      },
+    });
+    if (!res.ok) return [];
     const text = await res.text();
     const items = [];
-    const re = /<item>[\s\S]*?<title><!\[CDATA\[(.*?)\]\]><\/title>[\s\S]*?<link>(.*?)<\/link>[\s\S]*?<\/item>/g;
+    const re = /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>[\s\S]*?<link>(.*?)<\/link>[\s\S]*?<\/item>/g;
     let m;
     while ((m = re.exec(text)) && items.length < 5) {
-      items.push({ title: m[1].trim(), link: m[2].trim() });
+      const title = m[1].replace(/<!\[CDATA\[|\]\]>/g, "").trim();
+      const link  = m[2].trim();
+      if (title && link) items.push({ title, link });
     }
     return items;
-  } catch (e) {
+  } catch {
     return [];
   }
 }
