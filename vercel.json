@@ -1,7 +1,9 @@
 {
   "functions": {
     "pages/api/analyze.js": { "maxDuration": 60 },
-    "pages/api/auto-brief.js": { "maxDuration": 60 }
+    "pages/api/auto-brief.js": { "maxDuration": 60 },
+    "pages/api/run-single-market.js": { "maxDuration": 60 },
+    "pages/api/send-briefing-now.js": { "maxDuration": 60 }
   },
   "crons": [
     {
