@@ -392,18 +392,18 @@ export default async function handler(req, res) {
     });
   }
 
-  // ── 시장 분석 (순차 처리) ─────────────────────────────────────
-  const summary = [];
-  for (const m of MARKETS) {
-    try {
-      const result = await processMarket(m, date);
-      summary.push({ market: m.key, status: "ok", headlinesUsed: result.headlinesUsed, data: result.data });
+  // ── 시장 분석 (병렬 처리) ─────────────────────────────────────
+  const settled = await Promise.allSettled(MARKETS.map((m) => processMarket(m, date)));
+  const summary = settled.map((r, i) => {
+    const m = MARKETS[i];
+    if (r.status === "fulfilled") {
       console.log(`[auto-brief] ✓ ${m.key} 저장 완료`);
-    } catch (err) {
-      summary.push({ market: m.key, status: "error", error: String(err?.message || err) });
-      console.error(`[auto-brief] ✗ ${m.key} 실패:`, err?.message);
+      return { market: m.key, status: "ok", headlinesUsed: r.value.headlinesUsed, aiFallback: r.value.aiFallback, data: r.value.data };
+    } else {
+      console.error(`[auto-brief] ✗ ${m.key} 실패:`, r.reason?.message);
+      return { market: m.key, status: "error", error: String(r.reason?.message || r.reason) };
     }
-  }
+  });
 
   const successCount = summary.filter((r) => r.status === "ok").length;
   console.log(`[auto-brief] 완료: ${date} batch=${batch} — ${successCount}/${MARKETS.length} 성공`);
