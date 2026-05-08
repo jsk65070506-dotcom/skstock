@@ -341,10 +341,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // 인증 확인 (임시 bypass: ?bypass=skrun2026)
-  const isBypass = req.query.bypass === "skrun2026";
+  // 인증 확인
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && !isBypass) {
+  if (cronSecret) {
     const authHeader = req.headers.authorization;
     if (authHeader !== `Bearer ${cronSecret}`) {
       return res.status(401).json({ error: "Unauthorized" });
