@@ -74,19 +74,24 @@ function Metric({ label, value, delta }) {
  */
 
 /**
- * @param {{ brief: BriefData }} props
+ * @param {{ brief: BriefData, locked?: boolean, onLockedClick?: () => void }} props
  */
-export default function BriefingCard({ brief }) {
+export default function BriefingCard({ brief, locked = false, onLockedClick }) {
   const [open, setOpen] = useState(false);
 
   const trend   = sentimentToTrend(brief.sentiment);
   const metric  = brief.metric ?? DEFAULT_METRICS[brief.key] ?? null;
   const sources = brief.sources ?? ["AI 요약"];
 
+  const handleClick = () => {
+    if (locked) { onLockedClick?.(); return; }
+    setOpen((o) => !o);
+  };
+
   return (
     <div
-      onClick={() => setOpen((o) => !o)}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(52,211,153,0.25)")}
+      onClick={handleClick}
+      onMouseEnter={(e) => (e.currentTarget.style.borderColor = locked ? "rgba(52,211,153,0.35)" : "rgba(52,211,153,0.25)")}
       onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(232,239,234,0.08)")}
       style={{
         background:    "#101F18",
@@ -115,6 +120,20 @@ export default function BriefingCard({ brief }) {
       {/* ── F-14: 정량 지표 ── */}
       {metric && <Metric label={metric.label} value={metric.value} delta={metric.delta} />}
 
+      {/* ── 잠금 상태 ── */}
+      {locked ? (
+        <div style={{
+          marginTop: 8,
+          padding: "18px",
+          textAlign: "center",
+          background: "rgba(0,0,0,0.18)",
+          borderRadius: 8,
+          border: "1px solid rgba(52,211,153,0.14)",
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#34D399" }}>🔒 구독 후 확인</div>
+        </div>
+      ) : (
+      <>
       {/* ── 헤드라인 (한 줄 요약) ── */}
       <div style={{ fontSize: 14, fontWeight: 600, color: "#E8EFEA", lineHeight: 1.4, marginBottom: 8 }}>
         {brief.oneLineSummary}
@@ -192,6 +211,8 @@ export default function BriefingCard({ brief }) {
             <br />※ 본 내용은 투자 권유가 아닌 정보 제공 목적입니다. 투자 판단의 책임은 본인에게 있습니다.
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );
