@@ -281,17 +281,12 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
 
             {/* F-13: BriefingCard 통일 구조 */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {briefs.map((brief) => {
-                const isLocked = brief.key === "crypto" || brief.key === "realty";
-                return (
-                  <BriefingCard
-                    key={brief.key}
-                    brief={brief}
-                    locked={isLocked}
-                    onLockedClick={isLocked ? () => document.getElementById("subscribe-form")?.scrollIntoView({ behavior: "smooth" }) : undefined}
-                  />
-                );
-              })}
+              {briefs.map((brief) => (
+                <BriefingCard
+                  key={brief.key}
+                  brief={brief}
+                />
+              ))}
             </div>
           </div>
 
