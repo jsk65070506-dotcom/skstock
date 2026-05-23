@@ -3,10 +3,7 @@ import React from "react";
 import Head from "next/head";
 import SubscribeForm from "../components/SubscribeForm";
 import BriefingCard from "../components/BriefingCard";
-import PlusAlphaLogo from "../components/PlusAlphaLogo";
 import { createClient } from "@supabase/supabase-js";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://skstock.vercel.app";
 
 // ── 브랜드 색상 ──────────────────────────────────────────────────
 const BULL = "#34D399";
@@ -103,84 +100,8 @@ function getSampleBriefs(dateLabel) {
   ];
 }
 
-// ── 실시간 시장 지표 조회 ────────────────────────────────────────
-// BTC: CoinGecko (무인증, Vercel 허용)
-// S&P500/KOSPI: Stooq CSV (무인증)
-async function fetchLivePrices() {
-  const metrics = {};
-
-  // BTC — CoinGecko
-  try {
-    const res = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true",
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const price  = data?.bitcoin?.usd;
-      const change = data?.bitcoin?.usd_24h_change;
-      if (price) {
-        metrics.crypto = {
-          label: "BTC",
-          value: "$" + Math.round(price).toLocaleString("en-US"),
-          delta: (change >= 0 ? "+" : "") + change.toFixed(2) + "%",
-        };
-      }
-    }
-  } catch { /* fallback */ }
-
-  // S&P 500 — Stooq
-  try {
-    const res = await fetch(
-      "https://stooq.com/q/l/?s=^spx&f=sd2t2ohlcv&h&e=csv",
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (res.ok) {
-      const text = await res.text();
-      const lines = text.trim().split("\n");
-      const cols  = lines[1]?.split(",");
-      // Symbol,Date,Time,Open,High,Low,Close,Volume
-      const close = parseFloat(cols?.[6]);
-      const open  = parseFloat(cols?.[3]);
-      if (close && open) {
-        const changePct = ((close - open) / open) * 100;
-        metrics.us = {
-          label: "S&P 500",
-          value: close.toLocaleString("en-US", { maximumFractionDigits: 2 }),
-          delta: (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%",
-        };
-      }
-    }
-  } catch { /* fallback */ }
-
-  // KOSPI — Stooq
-  try {
-    const res = await fetch(
-      "https://stooq.com/q/l/?s=^kospi&f=sd2t2ohlcv&h&e=csv",
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (res.ok) {
-      const text = await res.text();
-      const lines = text.trim().split("\n");
-      const cols  = lines[1]?.split(",");
-      const close = parseFloat(cols?.[6]);
-      const open  = parseFloat(cols?.[3]);
-      if (close && open) {
-        const changePct = ((close - open) / open) * 100;
-        metrics.kr = {
-          label: "KOSPI",
-          value: close.toLocaleString("ko-KR", { maximumFractionDigits: 2 }),
-          delta: (changePct >= 0 ? "+" : "") + changePct.toFixed(2) + "%",
-        };
-      }
-    }
-  } catch { /* fallback */ }
-
-  return metrics;
-}
-
 // ── Supabase 데이터 → 카드 포맷 변환 ───────────────────────────
-function rowToBrief(row, dateLabel, metric) {
+function rowToBrief(row, dateLabel) {
   const META = {
     us:     { label: "미국 주식",  flag: "🇺🇸" },
     kr:     { label: "한국 주식",  flag: "🇰🇷" },
@@ -198,7 +119,6 @@ function rowToBrief(row, dateLabel, metric) {
     summary: row.summary || "",
     issues: Array.isArray(row.issues) ? row.issues : [],
     picks: Array.isArray(row.picks) ? row.picks : [],
-    ...(metric ? { metric } : {}),
   };
 }
 
@@ -212,30 +132,6 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
         <title>Plusalpha — 매일 아침 시장 뉴스레터</title>
         <meta name="description" content="주식·가상자산·부동산 뉴스를 빠르게 전달해 매일 아침 9시에 이메일로 보내드립니다." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        {/* F-10: OG / Twitter 메타 */}
-        <meta property="og:title"       content="Plusalpha — 매일 아침 시장 뉴스레터" />
-        <meta property="og:description" content="주식·가상자산·부동산 시황을 AI가 매일 새벽 정리해 09:00 KST에 이메일로 보내드립니다. 무료 · 광고 없음." />
-        <meta property="og:type"        content="website" />
-        <meta property="og:url"         content={SITE_URL} />
-        <meta property="og:image"       content={`${SITE_URL}/og-image.png`} />
-        <meta name="twitter:card"        content="summary_large_image" />
-        <meta name="twitter:title"       content="Plusalpha — 매일 아침 시장 뉴스레터" />
-        <meta name="twitter:description" content="주식·가상자산·부동산 시황을 AI가 매일 09:00 KST에 정리해 드립니다." />
-        <meta name="twitter:image"       content={`${SITE_URL}/og-image.png`} />
-        <link rel="icon" href="/favicon.ico" />
-        {/* F-12: 반응형 Hero — 단일 컴포넌트, 미디어쿼리로 분기 */}
-        <style>{`
-          .hero-title { font-size: 28px; }
-          .hero-desc  { font-size: 14px; }
-          .feature-grid { grid-template-columns: repeat(3, 1fr); }
-          @media (min-width: 480px) {
-            .hero-title { font-size: 34px; }
-            .hero-desc  { font-size: 16px; }
-          }
-          @media (max-width: 360px) {
-            .feature-grid { grid-template-columns: 1fr; }
-          }
-        `}</style>
       </Head>
 
       <div style={{
@@ -255,44 +151,64 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
           maxWidth: 600,
           margin: "0 auto",
         }}>
-          {/* F-10: PlusAlphaLogo 컴포넌트 */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <PlusAlphaLogo size={28} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL }}>Plusalpha</span>
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 500, color: BULL }}>+</span>
+            <span style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: 22, color: BULL, lineHeight: 1 }}>α</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL, marginLeft: 6 }}>Plusalpha</span>
           </div>
           <div style={{ fontSize: 11, color: "#6B8274" }}>매일 09:00 KST</div>
         </nav>
 
         <div style={{ maxWidth: 600, margin: "0 auto", padding: "0 20px 60px" }}>
 
-          {/* ── ① 브리핑 카드 (최상단) ── */}
-          <div style={{ marginBottom: 48, paddingTop: 28 }}>
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: "#6B8274", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
-                {isLive ? "Today's Briefing" : "Sample Briefing"}
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#E8EFEA", letterSpacing: -0.3 }}>
-                {isLive ? `${dateLabel} 오늘의 뉴스` : "이런 내용이 매일 도착해요"}
-              </div>
-              <div style={{ fontSize: 12, color: "#6B8274", marginTop: 4 }}>
-                카드를 눌러 상세 내용을 확인하세요
-              </div>
+          {/* ── 히어로 ── */}
+          <div style={{ textAlign: "center", padding: "56px 0 48px" }}>
+            <div style={{
+              display: "inline-block",
+              fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
+              color: BULL, background: "rgba(52,211,153,0.1)",
+              border: "1px solid rgba(52,211,153,0.25)",
+              borderRadius: 20, padding: "4px 12px", marginBottom: 20,
+            }}>
+              무료 · 광고 없음 · 언제든 해지
             </div>
 
-            {/* F-13: BriefingCard 통일 구조 */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {briefs.map((brief) => (
-                <BriefingCard
-                  key={brief.key}
-                  brief={brief}
-                />
-              ))}
+            <h1 style={{
+              fontSize: 34,
+              fontWeight: 800, letterSpacing: "-0.5px",
+              lineHeight: 1.25, margin: "0 0 16px",
+              color: "#dde1ea",
+            }}>
+              <span style={{ color: "#00e5a0" }}>월급만으로 부족한</span>{" "}우리를 위해
+            </h1>
+
+            <p style={{
+              fontSize: 16, color: "rgba(255,255,255,0.55)", lineHeight: 1.6,
+              margin: "0 0 36px", marginTop: 12, maxWidth: 400, marginLeft: "auto", marginRight: "auto",
+            }}>
+              주식·가상자산·부동산 뉴스를 <span style={{ color: "#00e5a0" }}>빠르게</span> 전달해드려요.
+            </p>
+
+            {/* F-01: Hero 인라인 이메일 폼 */}
+            <div style={{ maxWidth: 400, margin: "0 auto" }}>
+              <SubscribeForm variant="default" />
+            </div>
+
+            {/* F-01: 마이크로카피 */}
+            <div style={{ marginTop: 12, fontSize: 11, color: "#6B8274", lineHeight: 1.6 }}>
+              평일 09:00 KST · 본문 5분 · 광고 없음 · 1클릭 해지
+            </div>
+
+            {/* F-03: AI 출처 한 줄 */}
+            <div style={{ marginTop: 20, fontSize: 11, color: "#4A6353", lineHeight: 1.6 }}>
+              AI가 매일 새벽, 주요 매체 헤드라인을 정리해 만듭니다. 투자 판단의 책임은 본인에게 있습니다.
             </div>
           </div>
 
-          {/* ── ② 서비스 설명 (특징 3가지) ── */}
-          <div className="feature-grid" style={{
+          {/* ── 특징 3가지 ── */}
+          <div style={{
             display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
             gap: 12,
             marginBottom: 48,
           }}>
@@ -315,20 +231,30 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
             ))}
           </div>
 
-          {/* ── F-15: 가입 시 추가 가치 한 줄 ── */}
-          <div style={{
-            marginBottom: 20,
-            padding: "14px 18px",
-            background: "rgba(52,211,153,0.05)",
-            border: "1px solid rgba(52,211,153,0.14)",
-            borderRadius: 10,
-            fontSize: 13, color: "#9FB3A6", lineHeight: 1.6, textAlign: "center",
-          }}>
-            <span style={{ color: "#34D399", fontWeight: 700 }}>가입하면</span> 4개 시장 전체 + 지난 7일치 아카이브 + 관심 종목 알림을 받을 수 있어요.
+          {/* ── 브리핑 카드 ── */}
+          <div style={{ marginBottom: 48 }}>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: "#6B8274", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
+                {isLive ? "Today's Briefing" : "Sample Briefing"}
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#E8EFEA", letterSpacing: -0.3 }}>
+                {isLive ? `${dateLabel} 오늘의 뉴스` : "이런 내용이 매일 도착해요"}
+              </div>
+              <div style={{ fontSize: 12, color: "#6B8274", marginTop: 4 }}>
+                카드를 눌러 상세 내용을 확인하세요
+              </div>
+            </div>
+
+            {/* F-13: BriefingCard 통일 구조 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {briefs.map((brief) => (
+                <BriefingCard key={brief.key} brief={brief} />
+              ))}
+            </div>
           </div>
 
-          {/* ── ③ 구독 폼 (하단 단일, 앵커용 id) ── */}
-          <div id="subscribe-form" style={{
+          {/* ── 하단 CTA ── */}
+          <div style={{
             background: "linear-gradient(135deg, #0F2318 0%, #0A1510 100%)",
             border: "1px solid rgba(52,211,153,0.15)",
             borderRadius: 16,
@@ -355,26 +281,6 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
             제공된 시황 정보는 AI가 뉴스 헤드라인을 기반으로 생성한 참고 자료이며,<br />
             투자 판단의 책임은 본인에게 있습니다.
           </div>
-
-          {/* ── F-09: 운영자·문의·정책 footer ── */}
-          <div style={{
-            marginTop: 28,
-            paddingTop: 20,
-            borderTop: "1px solid rgba(232,239,234,0.06)",
-            fontSize: 10, color: "#4A6353", textAlign: "center", lineHeight: 2,
-          }}>
-            운영: Plusalpha &nbsp;·&nbsp;
-            <a href="mailto:jsk65070506@gmail.com" style={{ color: "#4A6353", textDecoration: "underline" }}>
-              문의: jsk65070506@gmail.com
-            </a>
-            &nbsp;·&nbsp;
-            <a href="/privacy" style={{ color: "#4A6353", textDecoration: "underline" }}>개인정보 처리방침</a>
-            &nbsp;·&nbsp;
-            <a href="/terms" style={{ color: "#4A6353", textDecoration: "underline" }}>이용약관</a>
-            <br />
-            {/* 정보통신망법 §50의5 송신자 정보 표시 */}
-            광고성 정보를 원치 않으시면 매 메일 하단 &apos;구독 해지&apos; 링크를 이용해주세요.
-          </div>
         </div>
       </div>
     </>
@@ -385,9 +291,6 @@ export default function HomePage({ briefs, dateLabel, isLive }) {
 export async function getServerSideProps() {
   const dateStr = getKstDateString();
   const dateLabel = formatDateLabel(dateStr);
-
-  // 실시간 가격 병렬 조회
-  const liveMetrics = await fetchLivePrices();
 
   try {
     const supabase = createClient(
@@ -418,7 +321,7 @@ export async function getServerSideProps() {
     const ordered = MARKETS
       .map(m => deduped.find(r => r.market === m))
       .filter(Boolean)
-      .map(row => rowToBrief(row, dateLabel, liveMetrics[row.market] ?? null));
+      .map(row => rowToBrief(row, dateLabel));
 
     if (ordered.length > 0) {
       return { props: { briefs: ordered, dateLabel, isLive: true } };
@@ -427,6 +330,6 @@ export async function getServerSideProps() {
     console.error("[index] getServerSideProps 오류:", e?.message);
   }
 
-  // 데이터 없으면 샘플 fallback (실시간 지표는 그대로 전달)
-  return { props: { briefs: getSampleBriefs(dateLabel).map(b => ({ ...b, ...(liveMetrics[b.key] ? { metric: liveMetrics[b.key] } : {}) })), dateLabel, isLive: false } };
+  // 데이터 없으면 샘플 fallback
+  return { props: { briefs: getSampleBriefs(dateLabel), dateLabel, isLive: false } };
 }
