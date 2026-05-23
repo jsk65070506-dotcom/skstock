@@ -17,10 +17,20 @@ const DEFAULT_METRICS = {
   realty: { label: "기준금리",  value: "3.50%",     delta: null     },
 };
 
+// ── 신호 정규화 (AI 오타 대응: 부증/부중/negative → 부정 등) ────
+function normalizeSignal(raw) {
+  if (!raw) return "중립";
+  const s = raw.trim();
+  if (/^(긍정|강세|매수|positive|bullish|상승)/i.test(s)) return "긍정";
+  if (/^(부정|부증|부중|약세|매도|negative|bearish|하락)/i.test(s)) return "부정";
+  return "중립";
+}
+
 // ── 픽 신호 스타일 ───────────────────────────────────────────────
 function signalStyle(signal) {
-  if (signal === "긍정") return { color: BULL, bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.30)" };
-  if (signal === "부정") return { color: BEAR, bg: "rgba(224,137,104,0.12)", border: "rgba(224,137,104,0.30)" };
+  const s = normalizeSignal(signal);
+  if (s === "긍정") return { color: BULL, bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.30)" };
+  if (s === "부정") return { color: BEAR, bg: "rgba(224,137,104,0.12)", border: "rgba(224,137,104,0.30)" };
   return { color: NEUTRAL, bg: "rgba(159,179,166,0.10)", border: "rgba(159,179,166,0.25)" };
 }
 
@@ -177,7 +187,8 @@ export default function BriefingCard({ brief, locked = false, onLockedClick }) {
             <div>
               <div style={{ fontSize: 10, letterSpacing: "0.1em", color: "#6B8274", marginBottom: 8, textTransform: "uppercase" }}>오늘의 주목 포인트</div>
               {brief.picks.map((pick, i) => {
-                const sig = signalStyle(pick.signal);
+                const normalizedSignal = normalizeSignal(pick.signal);
+                const sig = signalStyle(normalizedSignal);
                 return (
                   <div key={i} style={{
                     display: "flex", justifyContent: "space-between", alignItems: "flex-start",
@@ -197,7 +208,7 @@ export default function BriefingCard({ brief, locked = false, onLockedClick }) {
                       background: sig.bg, color: sig.color, border: `1px solid ${sig.border}`,
                       flexShrink: 0, marginLeft: 12,
                     }}>
-                      {pick.signal}
+                      {normalizedSignal}
                     </span>
                   </div>
                 );
