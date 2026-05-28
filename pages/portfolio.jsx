@@ -1,5 +1,5 @@
 // pages/portfolio.jsx — Brand V1 + 전면 개편
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 
@@ -324,12 +324,12 @@ const AddAssetForm = ({ type, onCancel, onSave, totalTargetRatio }) => {
       {/* 버튼 */}
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
         <button onClick={onCancel} style={{
-          flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(255,255,255,0.08)",
+          flex: 1, padding: "14px 0", borderRadius: 10, border: "1px solid rgba(255,255,255,0.08)",
           background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.55)",
           fontFamily: "inherit", fontSize: 12, cursor: "pointer",
         }}>취소</button>
         <button onClick={handleSave} disabled={!canSave} style={{
-          flex: 2, padding: "11px 0", borderRadius: 10, border: "none",
+          flex: 2, padding: "14px 0", borderRadius: 10, border: "none",
           background: canSave ? "#34D399" : "rgba(255,255,255,0.06)",
           color: canSave ? "#0B1510" : "rgba(255,255,255,0.25)",
           fontFamily: "inherit", fontSize: 13, fontWeight: 700,
@@ -346,7 +346,8 @@ const AddAssetForm = ({ type, onCancel, onSave, totalTargetRatio }) => {
 
 const AssetCard = ({ asset, currentRatio, onRemove }) => {
   const diff = currentRatio - asset.targetRatio;
-  const diffColor = Math.abs(diff) < 1 ? "#34D399" : diff > 0 ? "#C7532C" : "#6B8CC7";
+  // ±5% 이내: Emerald / +5% 초과: 주황 / -5% 미만: 파랑
+  const diffColor = Math.abs(diff) <= 5 ? "#34D399" : diff > 5 ? "#F97316" : "#6B8CC7";
 
   let profitInfo = null;
   if (asset.buyPrice && asset.currentPrice && asset.qty) {
@@ -378,7 +379,7 @@ const AssetCard = ({ asset, currentRatio, onRemove }) => {
         </div>
         <div className="tap" onClick={() => onRemove(asset.id)} style={{
           fontSize: 16, lineHeight: 1,
-          width: 22, height: 22, borderRadius: 999,
+          minWidth: 44, minHeight: 44, borderRadius: 999,
           display: "flex", alignItems: "center", justifyContent: "center",
           color: "rgba(255,255,255,0.35)",
           background: "rgba(255,255,255,0.03)",
@@ -424,12 +425,147 @@ const AssetCard = ({ asset, currentRatio, onRemove }) => {
   );
 };
 
+const LS_KEY = "plusalpha-portfolio-assets";
+
+// 스크린샷 인식 결과 미리보기 컴포넌트
+const ScreenshotPreview = ({ result, onConfirm, onCancel }) => {
+  const [ratios, setRatios] = useState(() =>
+    (result.assets || []).map(() => "")
+  );
+
+  const updateRatio = (i, val) => {
+    setRatios((prev) => { const next = [...prev]; next[i] = val; return next; });
+  };
+
+  const labelStyle = { fontSize: 10.5, color: "rgba(255,255,255,0.45)" };
+
+  return (
+    <div className="fade-up" style={{
+      borderRadius: 12, border: "1px solid rgba(52,211,153,0.25)",
+      background: "rgba(52,211,153,0.03)", padding: "16px", marginBottom: 16,
+    }}>
+      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>인식 결과 미리보기</div>
+
+      {result.error ? (
+        <div style={{ fontSize: 12, color: "#C7532C", padding: "10px 0" }}>
+          ❌ {result.error} — 스크린샷을 다시 시도해주세요
+        </div>
+      ) : (
+        <>
+          {result.confidence === "low" && (
+            <div style={{ fontSize: 11, color: "#F97316", marginBottom: 8 }}>
+              ⚠️ 일부 항목이 불확실합니다. 확인 후 등록하세요
+            </div>
+          )}
+          {result.note && (
+            <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.4)", marginBottom: 10, lineHeight: 1.5 }}>
+              {result.note}
+            </div>
+          )}
+
+          {/* 헤더 */}
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr 72px",
+            gap: 8, marginBottom: 6, paddingBottom: 6,
+            borderBottom: "1px solid rgba(255,255,255,0.07)",
+          }}>
+            <span style={labelStyle}>자산명</span>
+            <span style={{ ...labelStyle, textAlign: "right" }}>현재금액</span>
+            <span style={{ ...labelStyle, textAlign: "center" }}>목표%</span>
+          </div>
+
+          {/* 자산 행 */}
+          {(result.assets || []).map((a, i) => (
+            <div key={i} style={{
+              display: "grid", gridTemplateColumns: "1fr 1fr 72px",
+              gap: 8, alignItems: "center", marginBottom: 8,
+            }}>
+              <div style={{ fontSize: 12.5, color: "#E8EFE9", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {a.name}
+                {a.currency === "USD" && (
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>USD</span>
+                )}
+              </div>
+              <div className="num" style={{ fontSize: 12, color: "#E8EFE9", textAlign: "right" }}>
+                {a.currency === "USD"
+                  ? `$${Number(a.value).toLocaleString()}`
+                  : `${Number(a.value).toLocaleString()}원`
+                }
+              </div>
+              <input
+                type="number"
+                value={ratios[i]}
+                onChange={(e) => updateRatio(i, e.target.value)}
+                placeholder="—"
+                style={{
+                  width: "100%", padding: "8px 6px", borderRadius: 8, textAlign: "center",
+                  background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
+                  color: "#E8EFE9", fontSize: 12, fontFamily: "'JetBrains Mono', monospace",
+                  outline: "none",
+                }}
+              />
+            </div>
+          ))}
+
+          <div style={{ fontSize: 10.5, color: "rgba(255,255,255,0.4)", marginTop: 6, marginBottom: 14 }}>
+            ⚠️ 목표 비율은 직접 입력해주세요
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={onCancel} style={{
+              flex: 1, padding: "13px 0", borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.55)",
+              fontFamily: "inherit", fontSize: 12, cursor: "pointer",
+            }}>취소</button>
+            <button
+              onClick={() => onConfirm(result.assets || [], ratios)}
+              disabled={!(result.assets || []).length}
+              style={{
+                flex: 2, padding: "13px 0", borderRadius: 10, border: "none",
+                background: (result.assets || []).length ? "#34D399" : "rgba(255,255,255,0.06)",
+                color: (result.assets || []).length ? "#0B1510" : "rgba(255,255,255,0.25)",
+                fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer",
+              }}
+            >전체 등록 ({(result.assets || []).length}개)</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 export default function Portfolio() {
   const router = useRouter();
   const [assets, setAssets] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [isSample, setIsSample] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [selectedType, setSelectedType] = useState(null);
+  const [screenLoading, setScreenLoading] = useState(false);
+  const [screenResult, setScreenResult] = useState(null); // { assets, confidence, note, error }
+  const [successMsg, setSuccessMsg] = useState("");
+  const fileInputRef = useRef(null);
+
+  // localStorage에서 불러오기 (마운트 시 1회)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) setAssets(parsed);
+      }
+    } catch (e) { /* silent */ }
+    setLoaded(true);
+  }, []);
+
+  // assets 변경 시 자동 저장 (초기 로드 후에만)
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(assets));
+    } catch (e) { /* silent */ }
+  }, [assets, loaded]);
 
   const total = assets.reduce((sum, a) => sum + a.amount, 0);
   const totalTargetRatio = assets.reduce((sum, a) => sum + (a.targetRatio || 0), 0);
@@ -443,6 +579,35 @@ export default function Portfolio() {
   const handleRemove = (id) => setAssets((prev) => prev.filter((a) => a.id !== id));
   const loadSample = () => { setAssets(SAMPLE_DATA); setIsSample(true); };
   const clearSample = () => { setAssets([]); setIsSample(false); };
+
+  // 스크린샷 파일 선택 → base64 변환 → API 호출
+  const handleScreenshotFile = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // 파일 input 초기화 (같은 파일 재선택 허용)
+    e.target.value = "";
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const imageBase64 = evt.target.result; // data:image/...;base64,...
+      setScreenLoading(true);
+      setScreenResult(null);
+      try {
+        const res = await fetch("/api/analyze-screenshot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64 }),
+        });
+        const data = await res.json();
+        setScreenResult(data);
+      } catch (err) {
+        setScreenResult({ error: "네트워크 오류", assets: [] });
+      } finally {
+        setScreenLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
   const isEmpty = assets.length === 0;
 
@@ -508,6 +673,17 @@ export default function Portfolio() {
           </div>
         )}
 
+        {/* 성공 메시지 */}
+        {successMsg && (
+          <div className="fade-up" style={{
+            margin: "8px 16px 0", padding: "10px 14px", borderRadius: 8,
+            background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.3)",
+            fontSize: 12, color: "#34D399", textAlign: "center", fontWeight: 600,
+          }}>
+            {successMsg}
+          </div>
+        )}
+
         {/* BODY */}
         <div style={{ padding: "16px" }}>
           {/* 요약 */}
@@ -519,9 +695,46 @@ export default function Portfolio() {
               <div style={{ fontSize: 10, color: "#34D399", letterSpacing: 1, marginBottom: 6 }}>총 평가금액</div>
               <div className="num" style={{ fontSize: 22, fontWeight: 700, color: "#E8EFE9" }}>{fmtMoney(total)}</div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>
-                {assets.length}개 자산 · 목표 비율 합계 <span className="num">{totalTargetRatio}%</span>
+                {assets.length}개 자산
+              </div>
+              <div style={{ fontSize: 11, marginTop: 6 }}>
+                {totalTargetRatio === 100
+                  ? <span style={{ color: "#34D399" }}>목표 합계: <span className="num">100%</span> ✓</span>
+                  : <span style={{ color: "#F97316" }}>목표 합계: <span className="num">{totalTargetRatio}%</span> ⚠️ 100%가 되어야 합니다</span>
+                }
               </div>
             </div>
+          )}
+
+          {/* 스크린샷 인식 결과 미리보기 */}
+          {screenResult && !screenLoading && (
+            <ScreenshotPreview
+              result={screenResult}
+              onCancel={() => setScreenResult(null)}
+              onConfirm={(recognizedAssets, ratios) => {
+                const newAssets = recognizedAssets.map((a, i) => ({
+                  id: Date.now() + i,
+                  type: a.currency === "USD" ? "us" : "kr",
+                  name: a.name,
+                  ticker: null,
+                  currentPrice: null,
+                  qty: null,
+                  amount: Number(a.value) || 0,
+                  buyPrice: null,
+                  targetRatio: Number(ratios[i]) || 0,
+                }));
+                setAssets((prev) => {
+                  // 중복 자산명 덮어쓰기
+                  const filtered = prev.filter(
+                    (p) => !newAssets.some((n) => n.name === p.name)
+                  );
+                  return [...filtered, ...newAssets];
+                });
+                setScreenResult(null);
+                setSuccessMsg(`${newAssets.length}개 자산이 등록되었습니다 ✓`);
+                setTimeout(() => setSuccessMsg(""), 2000);
+              }}
+            />
           )}
 
           {/* 입력 폼 */}
@@ -540,13 +753,26 @@ export default function Portfolio() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: 1 }}>내 자산</div>
                 {!selectedType && (
-                  <div className="tap" onClick={handleAddClick} style={{
-                    fontSize: 12, color: "#34D399", fontWeight: 600,
-                    padding: "4px 10px", borderRadius: 6,
-                    background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.25)",
-                  }}>+ 추가</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <div className="tap" onClick={() => fileInputRef.current?.click()} style={{
+                      fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 500,
+                      padding: "12px 14px", borderRadius: 6,
+                      background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
+                    }}>📷</div>
+                    <div className="tap" onClick={handleAddClick} style={{
+                      fontSize: 12, color: "#34D399", fontWeight: 600,
+                      padding: "12px 14px", borderRadius: 6,
+                      background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.25)",
+                    }}>+ 추가</div>
+                  </div>
                 )}
               </div>
+              {/* 로딩 중 (자산 있을 때) */}
+              {screenLoading && (
+                <div style={{ fontSize: 12, color: "#34D399", textAlign: "center", padding: "12px 0", marginBottom: 10 }}>
+                  AI가 자산을 인식하는 중...
+                </div>
+              )}
               {assets.map((asset) => (
                 <AssetCard
                   key={asset.id}
@@ -570,13 +796,35 @@ export default function Portfolio() {
                 자산명, 현재 금액, 목표 비율을 입력하면<br />
                 현재 배분과의 편차를 바로 확인할 수 있어요
               </div>
+              {/* 숨겨진 파일 input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleScreenshotFile}
+                style={{ display: "none" }}
+              />
+              {/* 스크린샷 업로드 버튼 */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={screenLoading}
+                style={{
+                  width: "100%", padding: "14px 0", borderRadius: 12, border: "none", cursor: screenLoading ? "default" : "pointer",
+                  fontFamily: "inherit", fontSize: 14, fontWeight: 700,
+                  background: screenLoading ? "rgba(52,211,153,0.15)" : "#34D399",
+                  color: screenLoading ? "#34D399" : "#0B1510", marginBottom: 10,
+                }}
+              >
+                {screenLoading ? "AI가 자산을 인식하는 중..." : "📷 스크린샷으로 추가"}
+              </button>
               <button onClick={handleAddClick} style={{
                 width: "100%", padding: "14px 0", borderRadius: 12, border: "none", cursor: "pointer",
                 fontFamily: "inherit", fontSize: 14, fontWeight: 700,
-                background: "#34D399", color: "#0B1510", marginBottom: 10,
-              }}>+ 자산 추가하기</button>
+                background: "rgba(52,211,153,0.12)", color: "#34D399", marginBottom: 10,
+                border: "1px solid rgba(52,211,153,0.3)",
+              }}>+ 자산 직접 입력</button>
               <button onClick={loadSample} style={{
-                width: "100%", padding: "12px 0", borderRadius: 12,
+                width: "100%", padding: "14px 0", borderRadius: 12,
                 border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer",
                 fontFamily: "inherit", fontSize: 12.5, fontWeight: 500,
                 background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.6)",
@@ -584,6 +832,18 @@ export default function Portfolio() {
             </div>
           )}
         </div>
+
+        {/* 구독 CTA (항상 표시 — 면책 고지 바로 위) */}
+        {!selectedType && (
+          <div style={{ textAlign: "center", padding: "12px 16px 4px" }}>
+            <a
+              href="https://skstock.vercel.app/#subscribe-form"
+              style={{ fontSize: 11, color: "#34D399", textDecoration: "underline", cursor: "pointer" }}
+            >
+              매일 시장 흐름도 받아보세요 →
+            </a>
+          </div>
+        )}
 
         {/* 면책 고정 (빈 상태) */}
         {isEmpty && !selectedType && (
@@ -594,6 +854,14 @@ export default function Portfolio() {
             borderTop: "1px solid rgba(255,255,255,0.07)",
             padding: "12px 16px 24px",
           }}>
+            <div style={{ textAlign: "center", marginBottom: 8 }}>
+              <a
+                href="https://skstock.vercel.app/#subscribe-form"
+                style={{ fontSize: 11, color: "#34D399", textDecoration: "underline", cursor: "pointer" }}
+              >
+                매일 시장 흐름도 받아보세요 →
+              </a>
+            </div>
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", lineHeight: 1.6, textAlign: "center" }}>
               +α는 투자자문업자가 아니며, 본 도구는 정보 제공 목적의 자산 배분 시각화 서비스입니다.<br />
               투자 결정과 그에 따른 결과는 이용자 본인의 책임입니다.
