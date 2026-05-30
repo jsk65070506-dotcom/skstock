@@ -39,7 +39,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "imageBase64 필드가 필요합니다", assets: [] });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.KKUGI_ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return res.status(500).json({ error: "ANTHROPIC_API_KEY 미설정", assets: [] });
   }
