@@ -131,7 +131,9 @@ export default function BriefingCard({ brief, locked = false, onLockedClick }) {
 
   const trend      = sentimentToTrend(brief.sentiment);
   const liveMetric = useLiveMetric(brief.key);
-  const metric     = brief.metric ?? liveMetric ?? null;
+  // SYMBOL_MAP에 있는 마켓(us/kr/crypto)은 실시간 시세 우선, realty는 Supabase 데이터 사용
+  const hasSymbol  = Boolean(SYMBOL_MAP[brief.key]);
+  const metric     = hasSymbol ? (liveMetric ?? brief.metric ?? null) : (brief.metric ?? null);
   const sources    = brief.sources ?? ["AI 요약"];
 
   const handleClick = () => {

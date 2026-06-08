@@ -16,7 +16,7 @@ git remote set-url origin git@github.com:jsk65070506-dotcom/skstock.git
 
 echo "=== 변경사항 커밋 ==="
 git add -A
-git diff --cached --quiet || git commit -m "fix: analyze-screenshot KKUGI_ANTHROPIC_API_KEY 환경변수명 수정"
+git diff --cached --quiet || git commit -m "fix: 시세 하드코딩 제거 — Yahoo Finance 실시간 시세 연동"
 
 echo "=== 배포 push ==="
 GIT_SSH_COMMAND="ssh -i $KEY -o StrictHostKeyChecking=accept-new" git push origin chore/ux-review-2026-05-v2
