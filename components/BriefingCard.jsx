@@ -1,6 +1,6 @@
 // components/BriefingCard.jsx
 // F-13: 카드 4종 구조 통일  F-14: 카드별 정량 신호 1개  F-04: TrendBadge 사용
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TrendBadge, { sentimentToTrend } from "./TrendBadge";
 
 // ── 브랜드 토큰 (index.jsx와 동일, 신규 추가 없음) ──────────────
@@ -8,14 +8,54 @@ const BULL    = "#34D399";
 const BEAR    = "#E08968";
 const NEUTRAL = "#9FB3A6";
 
-// ── F-14: 시장별 더미 지표 ───────────────────────────────────────
-// TODO: connect to process.env.NEXT_PUBLIC_METRICS_PROVIDER
-const DEFAULT_METRICS = {
-  us:     { label: "S&P 500",  value: "5,320.07", delta: "+1.40%" },
-  kr:     { label: "KOSPI",    value: "2,641.30",  delta: "-0.82%" },
-  crypto: { label: "BTC",      value: "$89,240",   delta: "+2.10%" },
-  realty: { label: "기준금리",  value: "3.50%",     delta: null     },
+// ── F-14: 시장별 정적 fallback (로딩 중 표시용) ──────────────────
+const STATIC_METRICS = {
+  us:     { label: "S&P 500",  value: "—",   delta: null },
+  kr:     { label: "KOSPI",    value: "—",   delta: null },
+  crypto: { label: "BTC",      value: "—",   delta: null },
+  realty: { label: "기준금리",  value: "3.50%", delta: null },
 };
+
+// ── 시장 키 → Yahoo Finance 심볼 ─────────────────────────────────
+const SYMBOL_MAP = {
+  us:     "^GSPC",
+  kr:     "^KS11",
+  crypto: "BTC-USD",
+};
+
+// ── 실시간 시세 fetch 훅 ─────────────────────────────────────────
+function useLiveMetric(marketKey) {
+  const [metric, setMetric] = useState(STATIC_METRICS[marketKey] ?? null);
+
+  useEffect(() => {
+    const symbol = SYMBOL_MAP[marketKey];
+    if (!symbol) return; // realty는 정적값 유지
+
+    fetch(`/api/stock-price?symbol=${encodeURIComponent(symbol)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.price) return;
+
+        const price = data.price;
+        const isCrypto = marketKey === "crypto";
+        const isKr = marketKey === "kr";
+
+        let valueStr;
+        if (isCrypto) {
+          valueStr = "$" + price.toLocaleString("en-US", { maximumFractionDigits: 0 });
+        } else if (isKr) {
+          valueStr = price.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+        } else {
+          valueStr = price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        setMetric((prev) => ({ ...prev, value: valueStr, delta: null }));
+      })
+      .catch(() => {/* 실패 시 정적값 유지 */});
+  }, [marketKey]);
+
+  return metric;
+}
 
 // ── 신호 정규화 (AI 오타 대응: 부증/부중/negative → 부정 등) ────
 function normalizeSignal(raw) {
@@ -89,9 +129,10 @@ function Metric({ label, value, delta }) {
 export default function BriefingCard({ brief, locked = false, onLockedClick }) {
   const [open, setOpen] = useState(false);
 
-  const trend   = sentimentToTrend(brief.sentiment);
-  const metric  = brief.metric ?? DEFAULT_METRICS[brief.key] ?? null;
-  const sources = brief.sources ?? ["AI 요약"];
+  const trend      = sentimentToTrend(brief.sentiment);
+  const liveMetric = useLiveMetric(brief.key);
+  const metric     = brief.metric ?? liveMetric ?? null;
+  const sources    = brief.sources ?? ["AI 요약"];
 
   const handleClick = () => {
     if (locked) { onLockedClick?.(); return; }
